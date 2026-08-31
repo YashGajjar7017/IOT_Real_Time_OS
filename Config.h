@@ -1,0 +1,119 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <Arduino.h>
+
+// =====================================================================
+// HARDWARE PIN DEFINITIONS
+// =====================================================================
+// Relay 1 Pin (Default mapped to D1/GPIO 22 on standard ESP32 DevKit)
+// Note: If using NodeMCU-32S or specific shield, adjust pin as needed.
+#define RELAY_1_PIN         22   // D1 / GPIO22
+
+// Relay 2 Pin (Default mapped to D2/GPIO 21 on standard ESP32 DevKit)
+#define RELAY_2_PIN         21   // D2 / GPIO21
+
+// Built-in Status LED Pin (GPIO 2 on most ESP32 DevKit boards)
+#define STATUS_LED_PIN      2    // Onboard Blue LED
+
+// =====================================================================
+// DEFAULT ACCESS POINT (AP) CONFIGURATION
+// =====================================================================
+#define DEFAULT_AP_SSID     "ESP32-Power-Relay"
+#define DEFAULT_AP_PASS     "12345678"          // Minimum 8 chars, or "" for open AP
+#define DEFAULT_AP_CHANNEL  1
+#define DEFAULT_AP_MAX_CONN 4
+
+#define AP_IP_OCTET_1       192
+#define AP_IP_OCTET_2       168
+#define AP_IP_OCTET_3       4
+#define AP_IP_OCTET_4       1
+
+#define WEB_SERVER_PORT     80
+#define DNS_PORT            53
+
+// =====================================================================
+// LOW POWER / AP DUTY CYCLE CONFIGURATION
+// =====================================================================
+#define DEFAULT_AP_INACTIVITY_TIMEOUT_MS  (3 * 60 * 1000)   // 3 minutes before AP shuts down in Low Power Mode
+#define DEFAULT_AP_SLEEP_INTERVAL_MS      (15 * 60 * 1000)  // 15 minutes sleep interval before AP wakes up again
+#define DEFAULT_AP_WAKE_WINDOW_MS         (3 * 60 * 1000)   // 3 minutes discovery/connect window upon wake up
+
+// =====================================================================
+// FREERTOS CONFIGURATION
+// =====================================================================
+#define RELAY_TASK_CORE     1    // Run time-critical Relay logic on Core 1
+#define RELAY_TASK_PRIORITY 2    // High priority for zero-delay accuracy
+#define RELAY_TASK_STACK    4096
+
+#define SERVER_TASK_CORE    0    // Run Web Server & Wi-Fi on Core 0
+#define SERVER_TASK_PRIORITY 1
+#define SERVER_TASK_STACK   8192
+
+#define POWER_TASK_CORE     0    // Run AP Power Cycle manager on Core 0
+#define POWER_TASK_PRIORITY 1
+#define POWER_TASK_STACK    3072
+
+// =====================================================================
+// DATA STRUCTURES
+// =====================================================================
+
+// Relay Countdown Timer Configuration
+struct RelayTimerConfig {
+    bool enabled;               // Is countdown timer active?
+    uint32_t startDelaySec;     // Delay before turning ON (seconds)
+    uint32_t durationSec;       // Time to stay ON before turning OFF (seconds)
+    uint32_t timerStartEpoch;   // Epoch when timer was initiated
+    uint32_t remainingSec;      // Current remaining seconds for UI
+    bool isCountingDown;        // Currently in delay or active ON phase
+    bool inDelayPhase;          // True if waiting to turn ON, false if ON and timing duration
+};
+
+// Relay Daily Schedule Configuration (24h Clock)
+struct RelayScheduleConfig {
+    bool enabled;               // Is daily schedule active?
+    uint8_t startHour;          // 0-23
+    uint8_t startMinute;        // 0-59
+    uint8_t startSecond;        // 0-59
+    uint8_t endHour;            // 0-23
+    uint8_t endMinute;          // 0-59
+    uint8_t endSecond;          // 0-59
+    uint8_t daysActive;         // Bitmask: bit 0=Sun, 1=Mon, ..., 6=Sat, 7=All
+};
+
+// Full Relay Channel State & Settings
+struct RelayChannel {
+    uint8_t id;                 // 1 or 2
+    uint8_t pin;                // GPIO pin
+    char name[24];              // Friendly channel name
+    bool state;                 // Current physical output state (true = ON)
+    bool activeLow;             // True if relay triggers on LOW (most modules)
+    float ratedWatts;           // Connected load power in Watts (for kWh calculation)
+    uint32_t totalOnSeconds;    // Total lifetime ON runtime in seconds
+    uint32_t sessionOnSeconds;  // Current session ON runtime
+    
+    RelayTimerConfig timer;     // Countdown timer
+    RelayScheduleConfig schedule; // Daily schedule
+};
+
+// Low Power Mode Settings
+struct LowPowerConfig {
+    bool enabled;               // Low power AP duty-cycling enabled?
+    bool isApSleeping;          // Is AP currently shut off?
+    uint32_t sleepIntervalMin;  // Interval between wake-ups (e.g., 15-20 min)
+    uint32_t wakeWindowMin;     // Discovery window (e.g., 3 min)
+    uint32_t inactivityTimeoutMin; // Timeout with no clients before sleeping
+    uint32_t nextStateChangeEpoch; // Epoch of next sleep/wake transition
+};
+
+// Telemetry & System Diagnostics
+struct SystemTelemetry {
+    float internalTempC;        // ESP32 Chip temperature in Celsius
+    float internalTempF;        // In Fahrenheit
+    uint32_t freeHeapBytes;     // Free RAM
+    uint32_t uptimeSeconds;     // System uptime
+    uint8_t wifiClients;        // Connected stations on AP
+    bool timeSynchronized;      // Has time been synced with phone/manual?
+};
+
+#endif // CONFIG_H
