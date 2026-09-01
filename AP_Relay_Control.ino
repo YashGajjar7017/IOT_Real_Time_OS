@@ -61,6 +61,10 @@ void handleStatus() {
     uint32_t uptime = millis() / 1000;
     uint8_t clients = WiFi.softAPgetStationNum();
 
+    // Fetch Event logs
+    EventLogEntry logs[MAX_EVENT_LOGS];
+    int logCount = RelayManager::getInstance().getEventLogs(logs, MAX_EVENT_LOGS);
+
     String json = "{";
 
     // Time object
@@ -78,12 +82,22 @@ void handleStatus() {
     json += "\"act_low\":" + String(r1.activeLow ? "true" : "false") + ",";
     json += "\"watts\":" + String(r1.ratedWatts, 1) + ",";
     json += "\"total_sec\":" + String(r1.totalOnSeconds) + ",";
+    json += "\"pwr_on\":" + String(r1.powerOnState) + ",";
     json += "\"timer\":{";
     json += "\"active\":" + String(r1.timer.isCountingDown ? "true" : "false") + ",";
     json += "\"in_delay\":" + String(r1.timer.inDelayPhase ? "true" : "false") + ",";
     json += "\"delay_sec\":" + String(r1.timer.startDelaySec) + ",";
     json += "\"dur_sec\":" + String(r1.timer.durationSec) + ",";
     json += "\"remaining\":" + String(r1.timer.remainingSec);
+    json += "},";
+    json += "\"cycle\":{";
+    json += "\"active\":" + String(r1.cycle.enabled ? "true" : "false") + ",";
+    json += "\"in_on\":" + String(r1.cycle.inOnPhase ? "true" : "false") + ",";
+    json += "\"on_sec\":" + String(r1.cycle.onSec) + ",";
+    json += "\"off_sec\":" + String(r1.cycle.offSec) + ",";
+    json += "\"total_cycles\":" + String(r1.cycle.totalCycles) + ",";
+    json += "\"current_cycle\":" + String(r1.cycle.currentCycle) + ",";
+    json += "\"remaining\":" + String(r1.cycle.remainingSec);
     json += "},";
     json += "\"schedule\":{";
     json += "\"enabled\":" + String(r1.schedule.enabled ? "true" : "false") + ",";
@@ -101,12 +115,22 @@ void handleStatus() {
     json += "\"act_low\":" + String(r2.activeLow ? "true" : "false") + ",";
     json += "\"watts\":" + String(r2.ratedWatts, 1) + ",";
     json += "\"total_sec\":" + String(r2.totalOnSeconds) + ",";
+    json += "\"pwr_on\":" + String(r2.powerOnState) + ",";
     json += "\"timer\":{";
     json += "\"active\":" + String(r2.timer.isCountingDown ? "true" : "false") + ",";
     json += "\"in_delay\":" + String(r2.timer.inDelayPhase ? "true" : "false") + ",";
     json += "\"delay_sec\":" + String(r2.timer.startDelaySec) + ",";
     json += "\"dur_sec\":" + String(r2.timer.durationSec) + ",";
     json += "\"remaining\":" + String(r2.timer.remainingSec);
+    json += "},";
+    json += "\"cycle\":{";
+    json += "\"active\":" + String(r2.cycle.enabled ? "true" : "false") + ",";
+    json += "\"in_on\":" + String(r2.cycle.inOnPhase ? "true" : "false") + ",";
+    json += "\"on_sec\":" + String(r2.cycle.onSec) + ",";
+    json += "\"off_sec\":" + String(r2.cycle.offSec) + ",";
+    json += "\"total_cycles\":" + String(r2.cycle.totalCycles) + ",";
+    json += "\"current_cycle\":" + String(r2.cycle.currentCycle) + ",";
+    json += "\"remaining\":" + String(r2.cycle.remainingSec);
     json += "},";
     json += "\"schedule\":{";
     json += "\"enabled\":" + String(r2.schedule.enabled ? "true" : "false") + ",";
@@ -120,6 +144,7 @@ void handleStatus() {
     // Power saver object
     json += "\"power\":{";
     json += "\"enabled\":" + String(pwr.enabled ? "true" : "false") + ",";
+    json += "\"stay_on\":" + String(pwr.permanentStayOn ? "true" : "false") + ",";
     json += "\"sleeping\":" + String(pwr.isApSleeping ? "true" : "false") + ",";
     json += "\"sleep_min\":" + String(pwr.sleepIntervalMin) + ",";
     json += "\"wake_min\":" + String(pwr.wakeWindowMin) + ",";
@@ -132,8 +157,18 @@ void handleStatus() {
     json += "\"temp_f\":" + String(tempF, 1) + ",";
     json += "\"free_heap\":" + String(freeHeap) + ",";
     json += "\"uptime_sec\":" + String(uptime) + ",";
-    json += "\"clients\":" + String(clients);
-    json += "}";
+    json += "\"clients\":" + String(clients) + ",";
+    json += "\"rtos_relay_ticks\":" + String(RelayManager::getInstance().getTickCount()) + ",";
+    json += "\"rtos_power_ticks\":" + String(PowerManager::getInstance().getTickCount());
+    json += "},";
+
+    // Event Logs Array
+    json += "\"logs\":[";
+    for (int i = 0; i < logCount; i++) {
+        json += "{\"time\":\"" + String(logs[i].timestamp) + "\",\"msg\":\"" + String(logs[i].message) + "\"}";
+        if (i < logCount - 1) json += ",";
+    }
+    json += "]";
 
     json += "}";
 
@@ -169,6 +204,36 @@ void handleTimerSet() {
 
         RelayManager::getInstance().setCountdownTimer(id, delaySec, durSec, enable);
         server.send(200, "text/plain", "Timer Updated");
+    } else {
+        server.send(400, "text/plain", "Missing id");
+    }
+}
+
+void handleCycleSet() {
+    PowerManager::getInstance().registerUserActivity();
+
+    if (server.hasArg("id")) {
+        uint8_t id = server.arg("id").toInt();
+        bool enable = (server.arg("enable").toInt() == 1);
+        uint32_t onSec = server.hasArg("on_sec") ? server.arg("on_sec").toInt() : 60;
+        uint32_t offSec = server.hasArg("off_sec") ? server.arg("off_sec").toInt() : 60;
+        uint32_t cycles = server.hasArg("cycles") ? server.arg("cycles").toInt() : 0;
+
+        RelayManager::getInstance().setCycleAutomation(id, onSec, offSec, cycles, enable);
+        server.send(200, "text/plain", "Cycle Updated");
+    } else {
+        server.send(400, "text/plain", "Missing id");
+    }
+}
+
+void handlePulseSet() {
+    PowerManager::getInstance().registerUserActivity();
+
+    if (server.hasArg("id")) {
+        uint8_t id = server.arg("id").toInt();
+        uint32_t ms = server.hasArg("ms") ? server.arg("ms").toInt() : 1000;
+        RelayManager::getInstance().triggerPulse(id, ms);
+        server.send(200, "text/plain", "Pulse Triggered");
     } else {
         server.send(400, "text/plain", "Missing id");
     }
@@ -227,6 +292,13 @@ void handleManualTime() {
 void handlePowerConfig() {
     PowerManager::getInstance().registerUserActivity();
 
+    if (server.hasArg("stay_on")) {
+        bool stayOn = (server.arg("stay_on").toInt() == 1);
+        PowerManager::getInstance().setPermanentStayOn(stayOn);
+        server.send(200, "text/plain", "Permanent Stay-On Config Updated");
+        return;
+    }
+
     if (server.hasArg("enable")) {
         bool en = (server.arg("enable").toInt() == 1);
         uint32_t sleepMin = server.hasArg("sleep_min") ? server.arg("sleep_min").toInt() : 15;
@@ -235,7 +307,7 @@ void handlePowerConfig() {
         PowerManager::getInstance().setLowPowerMode(en, sleepMin, wakeMin);
         server.send(200, "text/plain", "Power Config Updated");
     } else {
-        server.send(400, "text/plain", "Missing enable parameter");
+        server.send(400, "text/plain", "Missing enable/stay_on parameter");
     }
 }
 
@@ -248,12 +320,22 @@ void handleSettingsUpdate() {
         bool r1ActLow = (server.arg("r1_actlow").toInt() == 1);
         RelayManager::getInstance().updateChannelConfig(1, r1Name.c_str(), r1ActLow, r1Watts);
     }
+    if (server.hasArg("r1_pwron")) {
+        uint8_t pwrOn = server.arg("r1_pwron").toInt();
+        RelayManager::getInstance().setPowerOnBehavior(1, pwrOn);
+    }
+
     if (server.hasArg("r2_name")) {
         String r2Name = server.arg("r2_name");
         float r2Watts = server.arg("r2_watts").toFloat();
         bool r2ActLow = (server.arg("r2_actlow").toInt() == 1);
         RelayManager::getInstance().updateChannelConfig(2, r2Name.c_str(), r2ActLow, r2Watts);
     }
+    if (server.hasArg("r2_pwron")) {
+        uint8_t pwrOn = server.arg("r2_pwron").toInt();
+        RelayManager::getInstance().setPowerOnBehavior(2, pwrOn);
+    }
+
     server.send(200, "text/plain", "Settings Saved");
 }
 
@@ -271,7 +353,7 @@ void handleCaptivePortalRedirect() {
 // FREERTOS TASKS
 // =====================================================================
 
-// Core 1 Task: Dedicated Relay Control & Accurate Timer/Schedule Engine
+// Core 1 Task: Dedicated Relay Control & Accurate Timer/Cycle/Schedule Engine
 void vRelayTask(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(100); // Check every 100ms
@@ -282,7 +364,7 @@ void vRelayTask(void *pvParameters) {
     }
 }
 
-// Core 0 Task: Low Power AP Sleep/Wake Cycle Manager
+// Core 0 Task: Low Power AP Sleep/Wake Cycle & Permanent Stay-On Manager
 void vPowerTask(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(500); // Check every 500ms
@@ -330,6 +412,8 @@ void setup() {
     server.on("/api/status", HTTP_GET, handleStatus);
     server.on("/api/relay", HTTP_POST, handleRelayToggle);
     server.on("/api/timer", HTTP_POST, handleTimerSet);
+    server.on("/api/cycle", HTTP_POST, handleCycleSet);
+    server.on("/api/pulse", HTTP_POST, handlePulseSet);
     server.on("/api/schedule", HTTP_POST, handleScheduleSet);
     server.on("/api/time/sync", HTTP_POST, handleTimeSync);
     server.on("/api/time/manual", HTTP_POST, handleManualTime);

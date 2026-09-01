@@ -1,7 +1,18 @@
 #include "RelayManager.h"
 
-RelayManager::RelayManager() : _lastProcessTick(0), _lastRuntimeSaveTick(0), _lastOneSecondTick(0) {
+RelayManager::RelayManager() : 
+    _logHead(0), 
+    _logCount(0), 
+    _lastProcessTick(0), 
+    _lastRuntimeSaveTick(0), 
+    _lastOneSecondTick(0),
+    _processTicks(0) {
     _relayMutex = xSemaphoreCreateMutex();
+
+    for (int i = 0; i < 2; i++) {
+        _pulseActive[i] = false;
+        _pulseEndTick[i] = 0;
+    }
 
     // Default Channel 1
     _channels[0].id = 1;
@@ -12,7 +23,9 @@ RelayManager::RelayManager() : _lastProcessTick(0), _lastRuntimeSaveTick(0), _la
     _channels[0].ratedWatts = 100.0f; // 100W default load
     _channels[0].totalOnSeconds = 0;
     _channels[0].sessionOnSeconds = 0;
+    _channels[0].powerOnState = POWERON_OFF;
     _channels[0].timer = { false, 0, 0, 0, 0, false, false };
+    _channels[0].cycle = { false, 60, 60, 0, 0, 0, false };
     _channels[0].schedule = { false, 8, 0, 0, 18, 0, 0, 0xFF };
 
     // Default Channel 2
@@ -24,7 +37,9 @@ RelayManager::RelayManager() : _lastProcessTick(0), _lastRuntimeSaveTick(0), _la
     _channels[1].ratedWatts = 100.0f;
     _channels[1].totalOnSeconds = 0;
     _channels[1].sessionOnSeconds = 0;
+    _channels[1].powerOnState = POWERON_OFF;
     _channels[1].timer = { false, 0, 0, 0, 0, false, false };
+    _channels[1].cycle = { false, 60, 60, 0, 0, 0, false };
     _channels[1].schedule = { false, 18, 0, 0, 22, 0, 0, 0xFF };
 }
 
@@ -47,15 +62,70 @@ void RelayManager::begin() {
 
     loadFromPreferences();
 
-    // Set initial physical state
-    applyPhysicalPin(1);
-    applyPhysicalPin(2);
+    // Set initial physical state based on Power-On preference
+    for (int i = 0; i < 2; i++) {
+        if (_channels[i].powerOnState == POWERON_ON) {
+            _channels[i].state = true;
+        } else if (_channels[i].powerOnState == POWERON_OFF) {
+            _channels[i].state = false;
+        } // if RESTORE_LAST, state was already restored in loadFromPreferences()
+        
+        applyPhysicalPin(i + 1);
+    }
 
     _lastProcessTick = millis();
     _lastRuntimeSaveTick = millis();
     _lastOneSecondTick = millis();
+    _processTicks = 0;
 
+    logEvent("System Booted & RTOS Initialized");
     Serial.println("[RelayManager] Initialized with 2 channels on GPIO " + String(_channels[0].pin) + " and " + String(_channels[1].pin));
+}
+
+void RelayManager::logEvent(const char* msg) {
+    if (!msg) return;
+    
+    char timeBuf[12] = "00:00:00";
+    if (TimeManager::getInstance().isTimeSynchronized()) {
+        TimeManager::getInstance().getFormattedTime(timeBuf, sizeof(timeBuf));
+    } else {
+        uint32_t s = millis() / 1000;
+        uint32_t sec = s % 60;
+        uint32_t min = (s / 60) % 60;
+        uint32_t hr = (s / 3600);
+        snprintf(timeBuf, sizeof(timeBuf), "+%02u:%02u:%02u", hr, min, sec);
+    }
+
+    strncpy(_logs[_logHead].timestamp, timeBuf, sizeof(_logs[_logHead].timestamp) - 1);
+    _logs[_logHead].timestamp[sizeof(_logs[_logHead].timestamp) - 1] = '\0';
+
+    strncpy(_logs[_logHead].message, msg, sizeof(_logs[_logHead].message) - 1);
+    _logs[_logHead].message[sizeof(_logs[_logHead].message) - 1] = '\0';
+
+    _logHead = (_logHead + 1) % MAX_EVENT_LOGS;
+    if (_logCount < MAX_EVENT_LOGS) {
+        _logCount++;
+    }
+}
+
+int RelayManager::getEventLogs(EventLogEntry* outLogs, int maxCount) {
+    if (!outLogs || maxCount <= 0) return 0;
+    
+    int count = 0;
+    if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        count = (_logCount < maxCount) ? _logCount : maxCount;
+        for (int i = 0; i < count; i++) {
+            // Read newest first
+            int idx = (_logHead - 1 - i + MAX_EVENT_LOGS) % MAX_EVENT_LOGS;
+            outLogs[i] = _logs[idx];
+        }
+        xSemaphoreGive(_relayMutex);
+    }
+    return count;
+}
+
+uint32_t RelayManager::getTickCount() {
+    return _processTicks;
 }
 
 void RelayManager::applyPhysicalPin(uint8_t channelId) {
@@ -79,6 +149,15 @@ void RelayManager::setRelayState(uint8_t channelId, bool state) {
         if (_channels[idx].state != state) {
             _channels[idx].state = state;
             applyPhysicalPin(channelId);
+            
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s manual -> %s", _channels[idx].name, state ? "ON" : "OFF");
+            logEvent(buf);
+            
+            // If manual toggle occurred, cancel any one-shot pulse
+            _pulseActive[idx] = false;
+            
+            saveToPreferences();
             Serial.printf("[RelayManager] Relay %d state -> %s\n", channelId, state ? "ON" : "OFF");
         }
         xSemaphoreGive(_relayMutex);
@@ -87,12 +166,25 @@ void RelayManager::setRelayState(uint8_t channelId, bool state) {
 
 void RelayManager::toggleRelay(uint8_t channelId) {
     if (channelId < 1 || channelId > 2) return;
-    
+    setRelayState(channelId, !_channels[channelId - 1].state);
+}
+
+void RelayManager::triggerPulse(uint8_t channelId, uint32_t pulseDurationMs) {
+    if (channelId < 1 || channelId > 2) return;
+    if (pulseDurationMs < 100) pulseDurationMs = 100;
+    if (pulseDurationMs > 30000) pulseDurationMs = 30000;
+
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         uint8_t idx = channelId - 1;
-        _channels[idx].state = !_channels[idx].state;
+        _channels[idx].state = true;
         applyPhysicalPin(channelId);
-        Serial.printf("[RelayManager] Relay %d toggled -> %s\n", channelId, _channels[idx].state ? "ON" : "OFF");
+        _pulseActive[idx] = true;
+        _pulseEndTick[idx] = millis() + pulseDurationMs;
+
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s Inching Pulse (%u ms)", _channels[idx].name, pulseDurationMs);
+        logEvent(buf);
+
         xSemaphoreGive(_relayMutex);
     }
 }
@@ -103,8 +195,12 @@ void RelayManager::setAllOff() {
             _channels[i].state = false;
             _channels[i].timer.enabled = false;
             _channels[i].timer.isCountingDown = false;
+            _channels[i].cycle.enabled = false;
+            _pulseActive[i] = false;
             applyPhysicalPin(i + 1);
         }
+        logEvent("🚨 EMERGENCY: All Relays Forced OFF");
+        saveToPreferences();
         Serial.println("[RelayManager] Emergency ALL OFF triggered!");
         xSemaphoreGive(_relayMutex);
     }
@@ -141,7 +237,9 @@ void RelayManager::setCountdownTimer(uint8_t channelId, uint32_t startDelaySec, 
         _channels[idx].timer.durationSec = durationSec;
         _channels[idx].timer.timerStartEpoch = TimeManager::getInstance().getEpochTime();
         
+        // Stop cycle mode if countdown timer starts
         if (enable) {
+            _channels[idx].cycle.enabled = false;
             _channels[idx].timer.isCountingDown = true;
             if (startDelaySec > 0) {
                 _channels[idx].timer.inDelayPhase = true;
@@ -153,9 +251,16 @@ void RelayManager::setCountdownTimer(uint8_t channelId, uint32_t startDelaySec, 
                 _channels[idx].state = true;  // Turn ON immediately
             }
             applyPhysicalPin(channelId);
+            
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s Timer: Delay %us, ON %us", _channels[idx].name, startDelaySec, durationSec);
+            logEvent(buf);
             Serial.printf("[RelayManager] Relay %d Timer Started: Delay=%u s, Duration=%u s\n", channelId, startDelaySec, durationSec);
         } else {
             _channels[idx].timer.isCountingDown = false;
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s Timer Cancelled", _channels[idx].name);
+            logEvent(buf);
             Serial.printf("[RelayManager] Relay %d Timer Cancelled\n", channelId);
         }
         xSemaphoreGive(_relayMutex);
@@ -164,6 +269,46 @@ void RelayManager::setCountdownTimer(uint8_t channelId, uint32_t startDelaySec, 
 
 void RelayManager::cancelCountdownTimer(uint8_t channelId) {
     setCountdownTimer(channelId, 0, 0, false);
+}
+
+void RelayManager::setCycleAutomation(uint8_t channelId, uint32_t onSec, uint32_t offSec, uint32_t totalCycles, bool enable) {
+    if (channelId < 1 || channelId > 2) return;
+    if (onSec == 0) onSec = 10;
+    if (offSec == 0) offSec = 10;
+
+    if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
+        uint8_t idx = channelId - 1;
+        _channels[idx].cycle.enabled = enable;
+        _channels[idx].cycle.onSec = onSec;
+        _channels[idx].cycle.offSec = offSec;
+        _channels[idx].cycle.totalCycles = totalCycles;
+        _channels[idx].cycle.currentCycle = 0;
+
+        if (enable) {
+            // Cancel any one-shot timer
+            _channels[idx].timer.enabled = false;
+            _channels[idx].timer.isCountingDown = false;
+
+            _channels[idx].cycle.inOnPhase = true;
+            _channels[idx].cycle.remainingSec = onSec;
+            _channels[idx].state = true;
+            applyPhysicalPin(channelId);
+
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s Cycle Loop Started (ON %us / OFF %us)", _channels[idx].name, onSec, offSec);
+            logEvent(buf);
+            Serial.printf("[RelayManager] Relay %d Cycle Started: ON=%u s, OFF=%u s, Cycles=%u\n", channelId, onSec, offSec, totalCycles);
+        } else {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%s Cycle Loop Stopped", _channels[idx].name);
+            logEvent(buf);
+        }
+        xSemaphoreGive(_relayMutex);
+    }
+}
+
+void RelayManager::cancelCycleAutomation(uint8_t channelId) {
+    setCycleAutomation(channelId, 0, 0, 0, false);
 }
 
 void RelayManager::setSchedule(uint8_t channelId, uint8_t startH, uint8_t startM, uint8_t endH, uint8_t endM, uint8_t daysActive, bool enable) {
@@ -179,6 +324,10 @@ void RelayManager::setSchedule(uint8_t channelId, uint8_t startH, uint8_t startM
         _channels[idx].schedule.endMinute = endM;
         _channels[idx].schedule.endSecond = 0;
         _channels[idx].schedule.daysActive = daysActive;
+
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s Schedule %s (%02d:%02d-%02d:%02d)", _channels[idx].name, enable ? "Enabled" : "Disabled", startH, startM, endH, endM);
+        logEvent(buf);
 
         saveToPreferences();
         Serial.printf("[RelayManager] Relay %d Schedule: %02d:%02d to %02d:%02d (Enabled: %d)\n", channelId, startH, startM, endH, endM, enable);
@@ -213,15 +362,41 @@ void RelayManager::updateChannelConfig(uint8_t channelId, const char* name, bool
     }
 }
 
+void RelayManager::setPowerOnBehavior(uint8_t channelId, uint8_t powerOnState) {
+    if (channelId < 1 || channelId > 2) return;
+    if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
+        _channels[channelId - 1].powerOnState = powerOnState;
+        saveToPreferences();
+        xSemaphoreGive(_relayMutex);
+    }
+}
+
 void RelayManager::processEngine() {
+    _processTicks++;
     uint32_t now = millis();
 
-    // 1-second interval execution
+    // Check momentary inching pulse completion (Fast sub-millisecond check)
+    for (int i = 0; i < 2; i++) {
+        if (_pulseActive[i] && now >= _pulseEndTick[i]) {
+            if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+                _pulseActive[i] = false;
+                _channels[i].state = false;
+                applyPhysicalPin(i + 1);
+                char buf[64];
+                snprintf(buf, sizeof(buf), "%s Inching Pulse Done -> OFF", _channels[i].name);
+                logEvent(buf);
+                xSemaphoreGive(_relayMutex);
+            }
+        }
+    }
+
+    // 1-second interval execution for Timers, Cycles & Schedules
     if (now - _lastOneSecondTick >= 1000) {
         _lastOneSecondTick = now;
 
         if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
             checkTimers();
+            checkCycles();
             checkSchedules();
             updateRuntimeMetrics();
             xSemaphoreGive(_relayMutex);
@@ -249,6 +424,11 @@ void RelayManager::checkTimers() {
                     _channels[i].timer.remainingSec = _channels[i].timer.durationSec;
                     _channels[i].state = true;
                     applyPhysicalPin(i + 1);
+                    
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "%s Timer Delay Done -> Turned ON", _channels[i].name);
+                    logEvent(buf);
+
                     Serial.printf("[RelayManager] Timer delay elapsed. Relay %d turned ON for %u s\n", i + 1, _channels[i].timer.durationSec);
                     
                     if (_channels[i].timer.durationSec == 0) {
@@ -262,7 +442,60 @@ void RelayManager::checkTimers() {
                     _channels[i].timer.isCountingDown = false;
                     _channels[i].timer.enabled = false;
                     applyPhysicalPin(i + 1);
+                    
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "%s Timer Duration Ended -> OFF", _channels[i].name);
+                    logEvent(buf);
+
                     Serial.printf("[RelayManager] Timer duration finished. Relay %d turned OFF\n", i + 1);
+                }
+            }
+        }
+    }
+}
+
+void RelayManager::checkCycles() {
+    for (int i = 0; i < 2; i++) {
+        if (_channels[i].cycle.enabled) {
+            if (_channels[i].cycle.remainingSec > 0) {
+                _channels[i].cycle.remainingSec--;
+            }
+
+            if (_channels[i].cycle.remainingSec == 0) {
+                if (_channels[i].cycle.inOnPhase) {
+                    // Switch to OFF phase
+                    _channels[i].cycle.inOnPhase = false;
+                    _channels[i].cycle.remainingSec = _channels[i].cycle.offSec;
+                    _channels[i].state = false;
+                    applyPhysicalPin(i + 1);
+
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "%s Cycle OFF Phase (%us)", _channels[i].name, _channels[i].cycle.offSec);
+                    logEvent(buf);
+                } else {
+                    // OFF phase ended -> increment cycle
+                    _channels[i].cycle.currentCycle++;
+                    
+                    // Check if max cycles reached
+                    if (_channels[i].cycle.totalCycles > 0 && _channels[i].cycle.currentCycle >= _channels[i].cycle.totalCycles) {
+                        _channels[i].cycle.enabled = false;
+                        _channels[i].state = false;
+                        applyPhysicalPin(i + 1);
+
+                        char buf[64];
+                        snprintf(buf, sizeof(buf), "%s All %u Cycles Completed", _channels[i].name, _channels[i].cycle.totalCycles);
+                        logEvent(buf);
+                    } else {
+                        // Switch to ON phase
+                        _channels[i].cycle.inOnPhase = true;
+                        _channels[i].cycle.remainingSec = _channels[i].cycle.onSec;
+                        _channels[i].state = true;
+                        applyPhysicalPin(i + 1);
+
+                        char buf[64];
+                        snprintf(buf, sizeof(buf), "%s Cycle %u ON Phase (%us)", _channels[i].name, _channels[i].cycle.currentCycle + 1, _channels[i].cycle.onSec);
+                        logEvent(buf);
+                    }
                 }
             }
         }
@@ -281,8 +514,8 @@ void RelayManager::checkSchedules() {
     uint8_t dayBit = (1 << dayOfWeek); // Sunday is bit 0, Monday bit 1...
 
     for (int i = 0; i < 2; i++) {
-        // Countdown timer has priority over schedule while active
-        if (_channels[i].timer.enabled && _channels[i].timer.isCountingDown) {
+        // Countdown timer & Cycle loop have priority over schedule while active
+        if ((_channels[i].timer.enabled && _channels[i].timer.isCountingDown) || _channels[i].cycle.enabled) {
             continue;
         }
 
@@ -304,6 +537,11 @@ void RelayManager::checkSchedules() {
                 if (_channels[i].state != shouldBeOn) {
                     _channels[i].state = shouldBeOn;
                     applyPhysicalPin(i + 1);
+                    
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "%s Schedule Trigger -> %s", _channels[i].name, shouldBeOn ? "ON" : "OFF");
+                    logEvent(buf);
+
                     Serial.printf("[RelayManager] Schedule triggered: Relay %d -> %s\n", i + 1, shouldBeOn ? "ON" : "OFF");
                 }
             }
@@ -330,6 +568,11 @@ void RelayManager::loadFromPreferences() {
             _channels[i].activeLow = _prefs.getBool((prefix + "actlow").c_str(), _channels[i].activeLow);
             _channels[i].ratedWatts = _prefs.getFloat((prefix + "watts").c_str(), _channels[i].ratedWatts);
             _channels[i].totalOnSeconds = _prefs.getUInt((prefix + "totsec").c_str(), 0);
+            _channels[i].powerOnState = _prefs.getUChar((prefix + "pwr_on").c_str(), POWERON_OFF);
+            bool lastState = _prefs.getBool((prefix + "last_st").c_str(), false);
+            if (_channels[i].powerOnState == POWERON_RESTORE_LAST) {
+                _channels[i].state = lastState;
+            }
 
             _channels[i].schedule.enabled = _prefs.getBool((prefix + "sch_en").c_str(), false);
             _channels[i].schedule.startHour = _prefs.getUChar((prefix + "sch_sh").c_str(), 8);
@@ -350,6 +593,8 @@ void RelayManager::saveToPreferences() {
             _prefs.putString((prefix + "name").c_str(), _channels[i].name);
             _prefs.putBool((prefix + "actlow").c_str(), _channels[i].activeLow);
             _prefs.putFloat((prefix + "watts").c_str(), _channels[i].ratedWatts);
+            _prefs.putUChar((prefix + "pwr_on").c_str(), _channels[i].powerOnState);
+            _prefs.putBool((prefix + "last_st").c_str(), _channels[i].state);
             
             _prefs.putBool((prefix + "sch_en").c_str(), _channels[i].schedule.enabled);
             _prefs.putUChar((prefix + "sch_sh").c_str(), _channels[i].schedule.startHour);
@@ -366,6 +611,8 @@ void RelayManager::saveRuntime() {
     if (_prefs.begin("relay_cfg", false)) {
         _prefs.putUInt("r1_totsec", _channels[0].totalOnSeconds);
         _prefs.putUInt("r2_totsec", _channels[1].totalOnSeconds);
+        _prefs.putBool("r1_last_st", _channels[0].state);
+        _prefs.putBool("r2_last_st", _channels[1].state);
         _prefs.end();
     }
 }

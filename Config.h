@@ -54,9 +54,19 @@
 #define POWER_TASK_PRIORITY 1
 #define POWER_TASK_STACK    3072
 
+// Maximum event log entries stored in RAM
+#define MAX_EVENT_LOGS      16
+
 // =====================================================================
 // DATA STRUCTURES
 // =====================================================================
+
+// Power-On Default State Behavior
+enum PowerOnState : uint8_t {
+    POWERON_OFF = 0,            // Always boot up OFF (Safest)
+    POWERON_ON = 1,             // Always boot up ON
+    POWERON_RESTORE_LAST = 2    // Remember & restore last state before power off
+};
 
 // Relay Countdown Timer Configuration
 struct RelayTimerConfig {
@@ -67,6 +77,17 @@ struct RelayTimerConfig {
     uint32_t remainingSec;      // Current remaining seconds for UI
     bool isCountingDown;        // Currently in delay or active ON phase
     bool inDelayPhase;          // True if waiting to turn ON, false if ON and timing duration
+};
+
+// Relay Cycle / Repeat Automation (e.g. pumps, aerators, hydroponics, cooling)
+struct RelayCycleConfig {
+    bool enabled;               // Is cycle mode running?
+    uint32_t onSec;             // Duration to stay ON per cycle
+    uint32_t offSec;            // Duration to stay OFF per cycle
+    uint32_t totalCycles;       // 0 for infinite repeat, or specific count (e.g. 5)
+    uint32_t currentCycle;      // Current completed cycle index
+    uint32_t remainingSec;      // Remaining seconds in current phase
+    bool inOnPhase;             // True if currently in ON phase, false if OFF
 };
 
 // Relay Daily Schedule Configuration (24h Clock)
@@ -91,14 +112,17 @@ struct RelayChannel {
     float ratedWatts;           // Connected load power in Watts (for kWh calculation)
     uint32_t totalOnSeconds;    // Total lifetime ON runtime in seconds
     uint32_t sessionOnSeconds;  // Current session ON runtime
+    uint8_t powerOnState;       // Default state on boot (POWERON_OFF, POWERON_ON, POWERON_RESTORE_LAST)
     
     RelayTimerConfig timer;     // Countdown timer
+    RelayCycleConfig cycle;     // Cyclic loop timer
     RelayScheduleConfig schedule; // Daily schedule
 };
 
 // Low Power Mode Settings
 struct LowPowerConfig {
     bool enabled;               // Low power AP duty-cycling enabled?
+    bool permanentStayOn;       // When true: Keep AP & System always ON permanently (Disables sleep)
     bool isApSleeping;          // Is AP currently shut off?
     uint32_t sleepIntervalMin;  // Interval between wake-ups (e.g., 15-20 min)
     uint32_t wakeWindowMin;     // Discovery window (e.g., 3 min)
@@ -114,6 +138,14 @@ struct SystemTelemetry {
     uint32_t uptimeSeconds;     // System uptime
     uint8_t wifiClients;        // Connected stations on AP
     bool timeSynchronized;      // Has time been synced with phone/manual?
+    uint32_t rtosRelayTicks;    // Real-Time task tick count
+    uint32_t rtosPowerTicks;    // Power manager tick count
+};
+
+// Real-Time System Event Log Entry
+struct EventLogEntry {
+    char timestamp[12];         // "HH:MM:SS"
+    char message[64];           // Event summary
 };
 
 #endif // CONFIG_H

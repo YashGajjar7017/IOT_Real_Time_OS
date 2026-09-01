@@ -1,9 +1,10 @@
 #include "PowerManager.h"
 
-PowerManager::PowerManager() : _lastActivityTick(0), _stateChangeTick(0) {
+PowerManager::PowerManager() : _lastActivityTick(0), _stateChangeTick(0), _processTicks(0) {
     _powerMutex = xSemaphoreCreateMutex();
 
     _config.enabled = false;
+    _config.permanentStayOn = true;       // Default: Permanent Always-On Mode
     _config.isApSleeping = false;
     _config.sleepIntervalMin = 15;        // 15 minutes off
     _config.wakeWindowMin = 3;            // 3 minutes on
@@ -37,11 +38,15 @@ void PowerManager::begin(const char* apSsid, const char* apPass) {
 
     _lastActivityTick = millis();
     _stateChangeTick = millis();
+    _processTicks = 0;
 }
 
 void PowerManager::setLowPowerMode(bool enable, uint32_t sleepMin, uint32_t wakeMin) {
     if (xSemaphoreTake(_powerMutex, portMAX_DELAY) == pdTRUE) {
         _config.enabled = enable;
+        if (enable) {
+            _config.permanentStayOn = false; // Enabling low power turns off permanent stay on
+        }
         if (sleepMin >= 1) _config.sleepIntervalMin = sleepMin;
         if (wakeMin >= 1) _config.wakeWindowMin = wakeMin;
 
@@ -59,6 +64,24 @@ void PowerManager::setLowPowerMode(bool enable, uint32_t sleepMin, uint32_t wake
     }
 }
 
+void PowerManager::setPermanentStayOn(bool permanentStayOn) {
+    if (xSemaphoreTake(_powerMutex, portMAX_DELAY) == pdTRUE) {
+        _config.permanentStayOn = permanentStayOn;
+        if (permanentStayOn) {
+            _config.enabled = false; // Disable sleep duty cycling
+            if (_config.isApSleeping) {
+                wakeUpAP();
+            }
+        }
+        _lastActivityTick = millis();
+        _stateChangeTick = millis();
+        saveToPreferences();
+
+        Serial.printf("[PowerManager] Permanent Stay-On Mode: %s\n", permanentStayOn ? "ENABLED (Sleep Disabled)" : "DISABLED");
+        xSemaphoreGive(_powerMutex);
+    }
+}
+
 void PowerManager::registerUserActivity() {
     if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
         _lastActivityTick = millis();
@@ -69,10 +92,19 @@ void PowerManager::registerUserActivity() {
 bool PowerManager::isLowPowerEnabled() {
     bool en = false;
     if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
-        en = _config.enabled;
+        en = _config.enabled && !_config.permanentStayOn;
         xSemaphoreGive(_powerMutex);
     }
     return en;
+}
+
+bool PowerManager::isPermanentStayOn() {
+    bool p = true;
+    if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+        p = _config.permanentStayOn;
+        xSemaphoreGive(_powerMutex);
+    }
+    return p;
 }
 
 bool PowerManager::isApSleeping() {
@@ -96,18 +128,26 @@ LowPowerConfig PowerManager::getConfig() {
 uint32_t PowerManager::getSecondsUntilNextState() {
     uint32_t remaining = 0;
     if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
-        uint32_t elapsed = millis() - _stateChangeTick;
-        if (_config.isApSleeping) {
-            uint32_t targetMs = _config.sleepIntervalMin * 60 * 1000;
-            remaining = (elapsed < targetMs) ? ((targetMs - elapsed) / 1000) : 0;
-        } else if (_config.enabled) {
-            uint32_t actElapsed = millis() - _lastActivityTick;
-            uint32_t targetMs = _config.wakeWindowMin * 60 * 1000;
-            remaining = (actElapsed < targetMs) ? ((targetMs - actElapsed) / 1000) : 0;
+        if (_config.permanentStayOn) {
+            remaining = 0;
+        } else {
+            uint32_t elapsed = millis() - _stateChangeTick;
+            if (_config.isApSleeping) {
+                uint32_t targetMs = _config.sleepIntervalMin * 60 * 1000;
+                remaining = (elapsed < targetMs) ? ((targetMs - elapsed) / 1000) : 0;
+            } else if (_config.enabled) {
+                uint32_t actElapsed = millis() - _lastActivityTick;
+                uint32_t targetMs = _config.wakeWindowMin * 60 * 1000;
+                remaining = (actElapsed < targetMs) ? ((targetMs - actElapsed) / 1000) : 0;
+            }
         }
         xSemaphoreGive(_powerMutex);
     }
     return remaining;
+}
+
+uint32_t PowerManager::getTickCount() {
+    return _processTicks;
 }
 
 void PowerManager::wakeUpAP() {
@@ -128,6 +168,9 @@ void PowerManager::wakeUpAP() {
 }
 
 void PowerManager::putAPToSleep() {
+    if (_config.permanentStayOn) {
+        return; // Inhibit sleep if permanent stay on is checked
+    }
     Serial.println("[PowerManager] Putting Wi-Fi AP to sleep (Power Saving)...");
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_OFF);
@@ -138,8 +181,14 @@ void PowerManager::putAPToSleep() {
 }
 
 void PowerManager::processEngine() {
+    _processTicks++;
     if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        if (_config.enabled) {
+        // If permanent stay on is enabled, ensure AP remains awake
+        if (_config.permanentStayOn) {
+            if (_config.isApSleeping) {
+                wakeUpAP();
+            }
+        } else if (_config.enabled) {
             uint32_t now = millis();
 
             if (!_config.isApSleeping) {
@@ -169,18 +218,22 @@ void PowerManager::processEngine() {
 
 void PowerManager::loadFromPreferences() {
     if (_prefs.begin("pwr_cfg", true)) {
+        _config.permanentStayOn = _prefs.getBool("lp_stay_on", true); // Default: Stay on permanently
         _config.enabled = _prefs.getBool("lp_en", false);
         _config.sleepIntervalMin = _prefs.getUInt("lp_sleep", 15);
         _config.wakeWindowMin = _prefs.getUInt("lp_wake", 3);
         _prefs.end();
+        Serial.printf("[PowerManager] Preferences loaded: PermanentStayOn=%d, LowPowerEn=%d\n", _config.permanentStayOn, _config.enabled);
     }
 }
 
 void PowerManager::saveToPreferences() {
     if (_prefs.begin("pwr_cfg", false)) {
+        _prefs.putBool("lp_stay_on", _config.permanentStayOn);
         _prefs.putBool("lp_en", _config.enabled);
         _prefs.putUInt("lp_sleep", _config.sleepIntervalMin);
         _prefs.putUInt("lp_wake", _config.wakeWindowMin);
         _prefs.end();
+        Serial.println("[PowerManager] Preferences saved permanently.");
     }
 }
