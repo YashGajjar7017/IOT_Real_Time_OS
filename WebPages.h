@@ -46,7 +46,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     /* Time & Status Bar */
     .status-bar { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
     .time-display { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--primary); font-size: 14px; }
-    .sync-btn { background: rgba(0, 229, 255, 0.2); border: 1px solid var(--primary); color: var(--primary); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .sync-btn { background: rgba(0, 229, 255, 0.2); border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
     .sync-btn:active { background: var(--primary); color: #000; }
 
     /* Permanent Stay-On Banner Box */
@@ -54,6 +54,16 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .stayon-info { display: flex; flex-direction: column; gap: 3px; max-width: 80%; }
     .stayon-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
     .stayon-sub { font-size: 11px; color: var(--text-sub); line-height: 1.3; }
+
+    /* Total Energy Consumption Summary Card */
+    .energy-total-card { background: linear-gradient(135deg, rgba(0, 230, 118, 0.10), rgba(0, 229, 255, 0.08)); border: 1px solid rgba(0, 230, 118, 0.38); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+    .energy-total-header { display: flex; justify-content: space-between; align-items: center; }
+    .energy-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .energy-val-badge { font-family: monospace; font-size: 16px; font-weight: 800; color: var(--success); background: rgba(0, 230, 118, 0.18); border: 1px solid var(--success); padding: 3px 10px; border-radius: 8px; box-shadow: 0 0 12px var(--success-glow); }
+    .energy-subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .energy-subitem { background: var(--card-inner-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+    .energy-subtitle { font-size: 10px; color: var(--text-sub); font-weight: 600; }
+    .energy-subval { font-size: 13px; font-weight: 700; color: #fff; }
 
     /* Relay Card */
     .relay-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 18px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.3); transition: border-color 0.3s; }
@@ -76,10 +86,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     input:checked + .slider { background-color: var(--success); box-shadow: 0 0 14px var(--success-glow); }
     input:checked + .slider:before { transform: translateX(26px); }
 
-    /* Inching / Quick Pulse Action */
+    /* Inching / Quick Pulse Action (Commented out) */
+    /*
     .pulse-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(255,255,255,0.04); border: 1px dashed var(--card-border); padding: 8px 12px; border-radius: 10px; }
     .pulse-btn { background: rgba(0, 229, 255, 0.15); border: 1px solid var(--primary); color: #fff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
     .pulse-btn:active { background: var(--primary); color: #000; }
+    */
 
     /* Tabs inside Relay */
     .tab-nav { display: flex; gap: 6px; background: var(--card-inner-bg); border: 1px solid var(--card-border); padding: 4px; border-radius: 10px; }
@@ -94,6 +106,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .input-row { display: flex; gap: 8px; }
     .input-box { flex: 1; background: var(--input-bg); border: 1px solid #3b4861; color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 13px; outline: none; }
     .input-box:focus { border-color: var(--primary); box-shadow: 0 0 8px var(--primary-glow); }
+
+    /* Weekday Selection Bar */
+    .weekday-bar { display: flex; gap: 4px; justify-content: space-between; margin-top: 4px; }
+    .day-btn { flex: 1; padding: 7px 0; font-size: 11px; font-weight: 700; background: var(--input-bg); border: 1px solid #3b4861; color: var(--text-sub); border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s; user-select: none; }
+    .day-btn.selected { background: linear-gradient(135deg, var(--primary), #00b0ff); color: #000; border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+    .day-presets { display: flex; gap: 6px; }
+    .preset-btn { font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); color: var(--text-sub); padding: 3px 8px; border-radius: 4px; cursor: pointer; }
+    .preset-btn:active { background: rgba(255,255,255,0.18); color: #fff; }
 
     /* Action Buttons */
     .btn { padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -125,7 +145,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     /* Real-Time Live Activity Event Log Console */
     .event-log-box { background: #0e131d; border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 12px; font-family: monospace; font-size: 11px; max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
     .event-entry { display: flex; gap: 8px; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0; }
-    .event-time { color: var(--primary); font-weight: 700; min-width: 60px; }
+    .event-time { color: var(--primary); font-weight: 700; min-width: 75px; }
 
     .master-btn { width: 100%; background: linear-gradient(135deg, #e11d48, #ff1744); color: #fff; font-size: 14px; font-weight: 800; padding: 13px; border-radius: 12px; border: none; cursor: pointer; box-shadow: 0 4px 20px var(--danger-glow); transition: transform 0.2s; }
     .master-btn:active { transform: scale(0.97); }
@@ -164,7 +184,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div class="status-bar">
       <div class="time-display">
         <span>🕒</span>
-        <span id="liveClock">--:--:--</span>
+        <span id="liveClock">--:--:-- --</span>
         <span id="liveDate" style="color:var(--text-sub); font-size:12px; font-weight:normal;">(Not Synced)</span>
       </div>
       <button class="sync-btn" id="phoneSyncBtn" title="Sync time with phone">📱 Sync Phone</button>
@@ -180,6 +200,26 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         <input type="checkbox" id="permanentStayOnSwitch" onchange="togglePermanentStayOn(this.checked)">
         <span class="slider"></span>
       </label>
+    </div>
+
+    <!-- Total Energy Consumption Card -->
+    <div class="energy-total-card">
+      <div class="energy-total-header">
+        <div class="energy-title">
+          <span>⚡ Total Energy Consumed</span>
+        </div>
+        <span class="energy-val-badge" id="totalKwhBadge">0.000 kWh</span>
+      </div>
+      <div class="energy-subgrid">
+        <div class="energy-subitem">
+          <span class="energy-subtitle">Total Runtime (All Relays)</span>
+          <span class="energy-subval" id="totalRuntimeVal">0h 0m</span>
+        </div>
+        <div class="energy-subitem">
+          <span class="energy-subtitle">Live Connected Power</span>
+          <span class="energy-subval" id="totalLiveWattsVal" style="color:var(--success);">0.0 W</span>
+        </div>
+      </div>
     </div>
 
     <!-- Relay 1 Card -->
@@ -198,15 +238,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <input type="checkbox" id="r1Switch" onchange="toggleRelay(1, this.checked)">
           <span class="slider"></span>
         </label>
-      </div>
-
-      <!-- Inching / Quick Pulse -->
-      <div class="pulse-row">
-        <span style="font-size:12px; color:var(--text-sub); font-weight:600;">⚡ Inching / Momentary Pulse:</span>
-        <div style="display:flex; gap:6px;">
-          <button class="pulse-btn" onclick="triggerPulse(1, 1000)">1s Pulse</button>
-          <button class="pulse-btn" onclick="triggerPulse(1, 3000)">3s Pulse</button>
-        </div>
       </div>
 
       <!-- Live Timer Info (Shown if active) -->
@@ -293,6 +324,25 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <label class="form-label">Daily Turn OFF Time (HH:MM):</label>
           <input type="time" class="input-box" id="r1SchedEnd" value="18:00">
         </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Active Weekdays:</label>
+            <div class="day-presets">
+              <button type="button" class="preset-btn" onclick="selectDayPreset(1, 'all')">All</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(1, 'weekdays')">Mon-Fri</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(1, 'weekends')">Sat-Sun</button>
+            </div>
+          </div>
+          <div class="weekday-bar" id="r1WeekdayBar">
+            <div class="day-btn selected" data-day="0" onclick="toggleDay(1, 0)">Sun</div>
+            <div class="day-btn selected" data-day="1" onclick="toggleDay(1, 1)">Mon</div>
+            <div class="day-btn selected" data-day="2" onclick="toggleDay(1, 2)">Tue</div>
+            <div class="day-btn selected" data-day="3" onclick="toggleDay(1, 3)">Wed</div>
+            <div class="day-btn selected" data-day="4" onclick="toggleDay(1, 4)">Thu</div>
+            <div class="day-btn selected" data-day="5" onclick="toggleDay(1, 5)">Fri</div>
+            <div class="day-btn selected" data-day="6" onclick="toggleDay(1, 6)">Sat</div>
+          </div>
+        </div>
         <div class="input-row" style="align-items:center; justify-content:space-between; margin-top:4px;">
           <span style="font-size:12px; color:var(--text-sub); font-weight:600;">Enable Daily Schedule</span>
           <label class="toggle-switch">
@@ -333,15 +383,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <input type="checkbox" id="r2Switch" onchange="toggleRelay(2, this.checked)">
           <span class="slider"></span>
         </label>
-      </div>
-
-      <!-- Inching / Quick Pulse -->
-      <div class="pulse-row">
-        <span style="font-size:12px; color:var(--text-sub); font-weight:600;">⚡ Inching / Momentary Pulse:</span>
-        <div style="display:flex; gap:6px;">
-          <button class="pulse-btn" onclick="triggerPulse(2, 1000)">1s Pulse</button>
-          <button class="pulse-btn" onclick="triggerPulse(2, 3000)">3s Pulse</button>
-        </div>
       </div>
 
       <!-- Live Timer Info (Shown if active) -->
@@ -428,6 +469,25 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <label class="form-label">Daily Turn OFF Time (HH:MM):</label>
           <input type="time" class="input-box" id="r2SchedEnd" value="22:00">
         </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Active Weekdays:</label>
+            <div class="day-presets">
+              <button type="button" class="preset-btn" onclick="selectDayPreset(2, 'all')">All</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(2, 'weekdays')">Mon-Fri</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(2, 'weekends')">Sat-Sun</button>
+            </div>
+          </div>
+          <div class="weekday-bar" id="r2WeekdayBar">
+            <div class="day-btn selected" data-day="0" onclick="toggleDay(2, 0)">Sun</div>
+            <div class="day-btn selected" data-day="1" onclick="toggleDay(2, 1)">Mon</div>
+            <div class="day-btn selected" data-day="2" onclick="toggleDay(2, 2)">Tue</div>
+            <div class="day-btn selected" data-day="3" onclick="toggleDay(2, 3)">Wed</div>
+            <div class="day-btn selected" data-day="4" onclick="toggleDay(2, 4)">Thu</div>
+            <div class="day-btn selected" data-day="5" onclick="toggleDay(2, 5)">Fri</div>
+            <div class="day-btn selected" data-day="6" onclick="toggleDay(2, 6)">Sat</div>
+          </div>
+        </div>
         <div class="input-row" style="align-items:center; justify-content:space-between; margin-top:4px;">
           <span style="font-size:12px; color:var(--text-sub); font-weight:600;">Enable Daily Schedule</span>
           <label class="toggle-switch">
@@ -462,7 +522,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         </label>
       </div>
       <div style="font-size:12px; color:var(--text-sub);" id="lowPowerDesc">
-        When enabled, turns off Wi-Fi AP after inactivity. AP re-awakens every 15 mins for discovery.
+        When enabled, turns off Wi-Fi AP after inactivity. AP re-awakens every 5 mins for discovery.
       </div>
       
       <div class="telemetry-grid" style="margin-top:4px;">
@@ -536,11 +596,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         <div class="input-row">
           <div style="flex:1;">
             <span class="form-label">AP Sleep (Minutes):</span>
-            <input type="number" class="input-box" id="lpSleepMin" value="15" min="1" max="120">
+            <input type="number" class="input-box" id="lpSleepMin" value="5" min="1" max="120">
           </div>
           <div style="flex:1;">
             <span class="form-label">Wake Window (Mins):</span>
-            <input type="number" class="input-box" id="lpWakeMin" value="3" min="1" max="30">
+            <input type="number" class="input-box" id="lpWakeMin" value="2" min="1" max="30">
           </div>
         </div>
       </div>
@@ -592,6 +652,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
   <script>
     let isModalOpen = false;
+    const rDays = { 1: 0xFF, 2: 0xFF };
 
     // Toast helper
     function showToast(msg) {
@@ -641,7 +702,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       }
     }
 
-    // Inching Pulse Trigger
+    /* Pulse Trigger - Commented out for now
     async function triggerPulse(id, ms) {
       try {
         const res = await fetch('/api/pulse', {
@@ -657,6 +718,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         showToast('Error triggering pulse');
       }
     }
+    */
 
     // Countdown Timer Start
     async function setTimer(id) {
@@ -753,6 +815,38 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       }
     }
 
+    // Weekday Toggle & Presets
+    function toggleDay(relayId, dayIdx) {
+      if (rDays[relayId] === 0xFF) {
+        rDays[relayId] = 0x7F; // expand all 7 days before toggling single day
+      }
+      rDays[relayId] ^= (1 << dayIdx);
+      updateDayUi(relayId);
+      setSchedule(relayId);
+    }
+
+    function selectDayPreset(relayId, preset) {
+      if (preset === 'all') rDays[relayId] = 0x7F;
+      else if (preset === 'weekdays') rDays[relayId] = 0x3E; // Mon(1)+Tue(2)+Wed(4)+Thu(8)+Fri(16) = 62
+      else if (preset === 'weekends') rDays[relayId] = 0x41; // Sun(0)+Sat(6) = 65
+      updateDayUi(relayId);
+      setSchedule(relayId);
+    }
+
+    function updateDayUi(relayId) {
+      const bar = document.getElementById(`r${relayId}WeekdayBar`);
+      if (!bar) return;
+      const mask = rDays[relayId];
+      bar.querySelectorAll('.day-btn').forEach(btn => {
+        const d = parseInt(btn.getAttribute('data-day'));
+        if ((mask & (1 << d)) || mask === 0xFF) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+    }
+
     // Schedule Set
     async function setSchedule(id) {
       const isEn = document.getElementById(`r${id}SchedEn`).checked;
@@ -763,12 +857,13 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       const startM = parseInt(startVal[1]) || 0;
       const endH = parseInt(endVal[0]) || 0;
       const endM = parseInt(endVal[1]) || 0;
+      const mask = rDays[id] !== undefined ? rDays[id] : 0xFF;
 
       try {
         const res = await fetch('/api/schedule', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: `id=${id}&start_h=${startH}&start_m=${startM}&end_h=${endH}&end_m=${endM}&days=255&enable=${isEn ? 1 : 0}`
+          body: `id=${id}&start_h=${startH}&start_m=${startM}&end_h=${endH}&end_m=${endM}&days=${mask}&enable=${isEn ? 1 : 0}`
         });
         if (res.ok) {
           showToast(`Relay ${id} Schedule ${isEn ? 'Enabled' : 'Disabled'}`);
@@ -793,6 +888,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         });
         if (res.ok) {
           showToast('Time Synced with Phone!');
+          // Immediately update liveClock in 12h format
+          let h = now.getHours();
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12;
+          if (h === 0) h = 12;
+          const m = String(now.getMinutes()).padStart(2, '0');
+          const s = String(now.getSeconds()).padStart(2, '0');
+          document.getElementById('liveClock').innerText = `${String(h).padStart(2, '0')}:${m}:${s} ${ampm}`;
           fetchStatus();
         }
       } catch(err) {
@@ -842,8 +945,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
     // Toggle Low Power Mode
     async function toggleLowPower(en) {
-      const sleepMin = parseInt(document.getElementById('lpSleepMin').value) || 15;
-      const wakeMin = parseInt(document.getElementById('lpWakeMin').value) || 3;
+      const sleepMin = parseInt(document.getElementById('lpSleepMin').value) || 5;
+      const wakeMin = parseInt(document.getElementById('lpWakeMin').value) || 2;
 
       try {
         const res = await fetch('/api/power', {
@@ -863,8 +966,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     // Save All Settings
     async function saveAllSettings() {
       const stayOn = document.getElementById('modalPermanentStayOn').checked;
-      const sleepMin = parseInt(document.getElementById('lpSleepMin').value) || 15;
-      const wakeMin = parseInt(document.getElementById('lpWakeMin').value) || 3;
+      const sleepMin = parseInt(document.getElementById('lpSleepMin').value) || 5;
+      const wakeMin = parseInt(document.getElementById('lpWakeMin').value) || 2;
 
       const r1Name = document.getElementById('cfgR1Name').value;
       const r1Watts = parseFloat(document.getElementById('cfgR1Watts').value) || 100;
@@ -995,6 +1098,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           document.getElementById('r1SchedEn').checked = r1.schedule.enabled;
           document.getElementById('r1SchedStart').value = `${String(r1.schedule.start_h).padStart(2,'0')}:${String(r1.schedule.start_m).padStart(2,'0')}`;
           document.getElementById('r1SchedEnd').value = `${String(r1.schedule.end_h).padStart(2,'0')}:${String(r1.schedule.end_m).padStart(2,'0')}`;
+          if (r1.schedule.days !== undefined) {
+            rDays[1] = r1.schedule.days;
+            updateDayUi(1);
+          }
         }
         document.getElementById('r1TotTime').innerText = formatHoursMin(r1.total_sec);
         const kwh1 = ((r1.total_sec / 3600) * (r1.watts / 1000)).toFixed(3);
@@ -1048,10 +1155,22 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           document.getElementById('r2SchedEn').checked = r2.schedule.enabled;
           document.getElementById('r2SchedStart').value = `${String(r2.schedule.start_h).padStart(2,'0')}:${String(r2.schedule.start_m).padStart(2,'0')}`;
           document.getElementById('r2SchedEnd').value = `${String(r2.schedule.end_h).padStart(2,'0')}:${String(r2.schedule.end_m).padStart(2,'0')}`;
+          if (r2.schedule.days !== undefined) {
+            rDays[2] = r2.schedule.days;
+            updateDayUi(2);
+          }
         }
         document.getElementById('r2TotTime').innerText = formatHoursMin(r2.total_sec);
         const kwh2 = ((r2.total_sec / 3600) * (r2.watts / 1000)).toFixed(3);
         document.getElementById('r2Energy').innerText = `${kwh2} kWh`;
+
+        // Total Combined Energy Consumption Metrics
+        const totalSecs = r1.total_sec + r2.total_sec;
+        const totalKwh = (((r1.total_sec / 3600) * (r1.watts / 1000)) + ((r2.total_sec / 3600) * (r2.watts / 1000))).toFixed(3);
+        const liveWatts = (r1.state ? r1.ratedWatts || r1.watts : 0) + (r2.state ? r2.ratedWatts || r2.watts : 0);
+        document.getElementById('totalKwhBadge').innerText = `${totalKwh} kWh`;
+        document.getElementById('totalRuntimeVal').innerText = formatHoursMin(totalSecs);
+        document.getElementById('totalLiveWattsVal').innerText = `${liveWatts.toFixed(1)} W`;
 
         // Low Power Mode Switch
         document.getElementById('lowPowerEnSwitch').checked = data.power.enabled;

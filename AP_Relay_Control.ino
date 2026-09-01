@@ -104,7 +104,8 @@ void handleStatus() {
     json += "\"start_h\":" + String(r1.schedule.startHour) + ",";
     json += "\"start_m\":" + String(r1.schedule.startMinute) + ",";
     json += "\"end_h\":" + String(r1.schedule.endHour) + ",";
-    json += "\"end_m\":" + String(r1.schedule.endMinute);
+    json += "\"end_m\":" + String(r1.schedule.endMinute) + ",";
+    json += "\"days\":" + String(r1.schedule.daysActive);
     json += "}";
     json += "},";
 
@@ -137,7 +138,8 @@ void handleStatus() {
     json += "\"start_h\":" + String(r2.schedule.startHour) + ",";
     json += "\"start_m\":" + String(r2.schedule.startMinute) + ",";
     json += "\"end_h\":" + String(r2.schedule.endHour) + ",";
-    json += "\"end_m\":" + String(r2.schedule.endMinute);
+    json += "\"end_m\":" + String(r2.schedule.endMinute) + ",";
+    json += "\"days\":" + String(r2.schedule.daysActive);
     json += "}";
     json += "},";
 
@@ -178,6 +180,7 @@ void handleStatus() {
 
 void handleRelayToggle() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("id")) {
         uint8_t id = server.arg("id").toInt();
@@ -195,6 +198,7 @@ void handleRelayToggle() {
 
 void handleTimerSet() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("id")) {
         uint8_t id = server.arg("id").toInt();
@@ -211,6 +215,7 @@ void handleTimerSet() {
 
 void handleCycleSet() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("id")) {
         uint8_t id = server.arg("id").toInt();
@@ -226,21 +231,25 @@ void handleCycleSet() {
     }
 }
 
+/* Commented out for now
 void handlePulseSet() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("id")) {
         uint8_t id = server.arg("id").toInt();
         uint32_t ms = server.hasArg("ms") ? server.arg("ms").toInt() : 1000;
-        RelayManager::getInstance().triggerPulse(id, ms);
+        // RelayManager::getInstance().triggerPulse(id, ms);
         server.send(200, "text/plain", "Pulse Triggered");
     } else {
         server.send(400, "text/plain", "Missing id");
     }
 }
+*/
 
 void handleScheduleSet() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("id")) {
         uint8_t id = server.arg("id").toInt();
@@ -260,9 +269,10 @@ void handleScheduleSet() {
 
 void handleTimeSync() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("epoch")) {
-        uint32_t epoch = (uint32_t)server.arg("epoch").toInt();
+        uint32_t epoch = (uint32_t)strtoul(server.arg("epoch").c_str(), NULL, 10);
         int tzOffset = server.hasArg("tz_offset") ? server.arg("tz_offset").toInt() : 0;
         TimeManager::getInstance().syncPhoneTime(epoch, tzOffset);
         server.send(200, "text/plain", "Time Synced");
@@ -273,6 +283,7 @@ void handleTimeSync() {
 
 void handleManualTime() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("year") && server.hasArg("month") && server.hasArg("day")) {
         int y = server.arg("year").toInt();
@@ -291,6 +302,7 @@ void handleManualTime() {
 
 void handlePowerConfig() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("stay_on")) {
         bool stayOn = (server.arg("stay_on").toInt() == 1);
@@ -301,8 +313,8 @@ void handlePowerConfig() {
 
     if (server.hasArg("enable")) {
         bool en = (server.arg("enable").toInt() == 1);
-        uint32_t sleepMin = server.hasArg("sleep_min") ? server.arg("sleep_min").toInt() : 15;
-        uint32_t wakeMin = server.hasArg("wake_min") ? server.arg("wake_min").toInt() : 3;
+        uint32_t sleepMin = server.hasArg("sleep_min") ? server.arg("sleep_min").toInt() : 5;
+        uint32_t wakeMin = server.hasArg("wake_min") ? server.arg("wake_min").toInt() : 2;
 
         PowerManager::getInstance().setLowPowerMode(en, sleepMin, wakeMin);
         server.send(200, "text/plain", "Power Config Updated");
@@ -313,6 +325,7 @@ void handlePowerConfig() {
 
 void handleSettingsUpdate() {
     PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
 
     if (server.hasArg("r1_name")) {
         String r1Name = server.arg("r1_name");
@@ -341,6 +354,7 @@ void handleSettingsUpdate() {
 
 void handleEmergencyAllOff() {
     RelayManager::getInstance().setAllOff();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
     server.send(200, "text/plain", "ALL RELAYS OFF");
 }
 
@@ -413,7 +427,7 @@ void setup() {
     server.on("/api/relay", HTTP_POST, handleRelayToggle);
     server.on("/api/timer", HTTP_POST, handleTimerSet);
     server.on("/api/cycle", HTTP_POST, handleCycleSet);
-    server.on("/api/pulse", HTTP_POST, handlePulseSet);
+    // server.on("/api/pulse", HTTP_POST, handlePulseSet);
     server.on("/api/schedule", HTTP_POST, handleScheduleSet);
     server.on("/api/time/sync", HTTP_POST, handleTimeSync);
     server.on("/api/time/manual", HTTP_POST, handleManualTime);

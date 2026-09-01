@@ -13,7 +13,7 @@ public:
     void begin(const char* apSsid, const char* apPass);
     
     // Low Power Control & Permanent Stay-On
-    void setLowPowerMode(bool enable, uint32_t sleepMin = 15, uint32_t wakeMin = 3);
+    void setLowPowerMode(bool enable, uint32_t sleepMin = 5, uint32_t wakeMin = 2);
     void setPermanentStayOn(bool permanentStayOn);
     void registerUserActivity();
     

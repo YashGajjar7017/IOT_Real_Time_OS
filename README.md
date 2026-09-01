@@ -20,20 +20,22 @@ A real-time, FreeRTOS multi-core IoT dual-relay controller powered by the ESP32.
    - Stored directly in ESP32 Non-Volatile Storage (`Preferences`) across power resets.
 5. **Advanced Relay Automations ("More Real-Time Work")**:
    - **Manual Switching**: Instant physical toggle with active-low / active-high polarity configuration.
-   - **Inching / Pulse Trigger**: 1s / 3s / custom momentary pulses (ideal for garage doors, gates, reset triggers).
    - **Countdown Timer Mode**: Start Delay and ON Duration with live progress countdown.
    - **Cyclic Repeat Loop**: ON duration, OFF duration, and loop repeat count (or infinite loop) for water pumps, aerators, hydroponics, and cooling fans.
-   - **Daily 24h Schedule Mode**: Set Turn-ON time (`HH:MM`) and Turn-OFF time (`HH:MM`) with day-of-week filters.
+   - **Daily Schedule with Weekday Filters**: Set Turn-ON time (`HH:MM`) and Turn-OFF time (`HH:MM`) with interactive day-of-week checkboxes (Sun-Sat, Weekdays, Weekends).
    - **Power-On Default State**: Choose whether relays boot up as Always OFF, Always ON, or Restore Previous State after a power cut.
-6. **Smart Time Synchronization**:
+6. **Smart Time Synchronization & 12-Hour Display**:
+   - **12-Hour Format**: Displays live clock in standard 12-hour format with AM/PM indicators.
    - **1-Click Phone Sync**: Automatically grabs exact timestamp and timezone from mobile browser on load.
    - **Manual Time Setting**: Set custom date and time via the built-in datetime picker in settings.
 7. **Live Real-Time Activity Event Stream**:
    - In-memory event stream tracking the latest operations (timer finishes, schedule events, manual clicks, boots) directly on the web dashboard.
-8. **Telemetry & Energy Metering**:
+8. **Telemetry & Total Energy Consumption Metering**:
    - Real-time ESP32 chip temperature (`°C` and `°F`), Free RAM heap, System Uptime, Connected clients, and FreeRTOS Core 0 / Core 1 execution tick counters.
-   - Total runtime tracking and estimated energy consumption (**kWh**) based on configured load wattage.
+   - Total Combined Energy Consumption summary widget (**kWh**) across all channels, total runtime, and live connected wattage.
    - Emergency Master Kill Switch ("🚨 EMERGENCY ALL OFF").
+9. **Optimized Low Power Battery Saving Duty Cycle**:
+   - When low-power mode is enabled, the AP sleeps for **5 minutes**, then wakes up for a **2-minute discovery/connect window**.
 
 ---
 
@@ -47,7 +49,7 @@ A real-time, FreeRTOS multi-core IoT dual-relay controller powered by the ESP32.
  |  [ GND ] -------------> Relay Board GND (Ground)      |
  |  [ D1 / GPIO 22 ] ----> Relay 1 IN1                   |
  |  [ D2 / GPIO 21 ] ----> Relay 2 IN2                   |
- |  [ D2 / GPIO 2  ] ----> Built-in Status LED (Active)  |
+ |  [ D2 / GPIO 2  ] ----> Built-in Status LED (Disabled)|
  +-------------------------------------------------------+
 
  +-------------------------------------------------------+
@@ -69,7 +71,7 @@ A real-time, FreeRTOS multi-core IoT dual-relay controller powered by the ESP32.
 | :--- | :--- | :--- | :--- |
 | **D1** | `GPIO 22` | Relay 1 Control Pin | Active LOW (Configurable) |
 | **D2** | `GPIO 21` | Relay 2 Control Pin | Active LOW (Configurable) |
-| **LED** | `GPIO 2` | Onboard Blue Status Indicator | Active HIGH (Turns ON if any relay is active) |
+| **LED** | `GPIO 2` | Onboard Blue Status Indicator | Disabled / Kept OFF |
 
 ---
 
@@ -82,7 +84,7 @@ A real-time, FreeRTOS multi-core IoT dual-relay controller powered by the ESP32.
 
 ### Step-by-Step Guide
 1. Open the Arduino IDE.
-2. Open [`IOT_Real_Time_OS.ino`](file:///a:/Coding/IOT_Code/IOT_RealTime_OS/IOT_Real_Time_OS/IOT_Real_Time_OS.ino).
+2. Open [`IOT_Real_Time_OS.ino`](file:///c:/Data/Coding/IOT_Code/AP_Relay_Control/IOT_Real_Time_OS.ino).
 3. In **Tools**, select:
    - **Board**: `ESP32 Dev Module` (or your specific ESP32 variant)
    - **Flash Frequency**: `80MHz`
@@ -98,13 +100,12 @@ A real-time, FreeRTOS multi-core IoT dual-relay controller powered by the ESP32.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/status` | None | Returns full JSON system state, relays, timers, cycles, events, and telemetry |
 | `POST` | `/api/relay` | `id=1&state=1` | Turn ON/OFF/Toggle Relay 1 or 2 |
-| `POST` | `/api/pulse` | `id=1&ms=1000` | Trigger momentary inching pulse (milliseconds) |
 | `POST` | `/api/timer` | `id=1&start_delay=0&duration=600&enable=1` | Start or cancel countdown timer (seconds) |
 | `POST` | `/api/cycle` | `id=1&on_sec=30&off_sec=30&cycles=0&enable=1` | Start or cancel cyclic automation loop |
-| `POST` | `/api/schedule` | `id=1&start_h=8&start_m=0&end_h=18&end_m=0&enable=1` | Set daily start/end schedule |
+| `POST` | `/api/schedule` | `id=1&start_h=8&start_m=0&end_h=18&end_m=0&days=127&enable=1` | Set daily start/end schedule with weekday bitmask |
 | `POST` | `/api/time/sync` | `epoch=1725100000&tz_offset=330` | Sync software RTC with UNIX timestamp & timezone |
 | `POST` | `/api/time/manual` | `year=2026&month=8&day=31&hour=16&min=30&sec=0` | Set RTC date and time manually |
-| `POST` | `/api/power` | `stay_on=1` OR `enable=1&sleep_min=15&wake_min=3` | Configure Permanent Stay-On or Low-Power Sleep Duty Cycle |
+| `POST` | `/api/power` | `stay_on=1` OR `enable=1&sleep_min=5&wake_min=2` | Configure Permanent Stay-On or Low-Power Sleep Duty Cycle |
 | `POST` | `/api/settings` | `r1_name=Pump&r1_watts=250&r1_actlow=1&r1_pwron=0...` | Configure relay names, wattage, active-low polarity, and power-on state |
 | `POST` | `/api/all_off` | None | Emergency kill switch - immediately forces all relays OFF |
 

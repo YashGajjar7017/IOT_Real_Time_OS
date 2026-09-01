@@ -26,15 +26,17 @@ void TimeManager::begin() {
 
 void TimeManager::syncPhoneTime(uint32_t epochSec, int tzOffsetMinutes) {
     if (xSemaphoreTake(_timeMutex, portMAX_DELAY) == pdTRUE) {
+        // Adjust UTC epoch with timezone offset to ensure localtime_r reflects exact phone local clock
+        uint32_t localEpoch = epochSec + (uint32_t)(tzOffsetMinutes * 60);
         struct timeval tv;
-        tv.tv_sec = epochSec;
+        tv.tv_sec = localEpoch;
         tv.tv_usec = 0;
         settimeofday(&tv, NULL);
         
         _tzOffsetMinutes = tzOffsetMinutes;
         _isSynchronized = true;
         
-        Serial.printf("[TimeManager] Phone Time Synced! Epoch: %u, TZ Offset: %d mins\n", epochSec, tzOffsetMinutes);
+        Serial.printf("[TimeManager] Phone Time Synced! Local Epoch: %u (UTC: %u, Offset: %d mins)\n", localEpoch, epochSec, tzOffsetMinutes);
         xSemaphoreGive(_timeMutex);
     }
 }
@@ -92,7 +94,10 @@ void TimeManager::getFormattedTime(char* buffer, size_t maxLen) {
     time(&now);
     struct tm timeinfo;
     localtime_r(&now, &timeinfo);
-    snprintf(buffer, maxLen, "%02d:%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    int h12 = timeinfo.tm_hour % 12;
+    if (h12 == 0) h12 = 12;
+    const char* ampm = (timeinfo.tm_hour >= 12) ? "PM" : "AM";
+    snprintf(buffer, maxLen, "%02d:%02d:%02d %s", h12, timeinfo.tm_min, timeinfo.tm_sec, ampm);
 }
 
 void TimeManager::getFormattedDate(char* buffer, size_t maxLen) {

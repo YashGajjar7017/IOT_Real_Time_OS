@@ -6,9 +6,9 @@ PowerManager::PowerManager() : _lastActivityTick(0), _stateChangeTick(0), _proce
     _config.enabled = false;
     _config.permanentStayOn = true;       // Default: Permanent Always-On Mode
     _config.isApSleeping = false;
-    _config.sleepIntervalMin = 15;        // 15 minutes off
-    _config.wakeWindowMin = 3;            // 3 minutes on
-    _config.inactivityTimeoutMin = 3;     // 3 minutes no-activity timeout
+    _config.sleepIntervalMin = 5;         // 5 minutes off
+    _config.wakeWindowMin = 2;            // 2 minutes on
+    _config.inactivityTimeoutMin = 2;     // 2 minutes no-activity timeout
     _config.nextStateChangeEpoch = 0;
 
     strncpy(_apSsid, DEFAULT_AP_SSID, sizeof(_apSsid) - 1);
@@ -220,8 +220,8 @@ void PowerManager::loadFromPreferences() {
     if (_prefs.begin("pwr_cfg", true)) {
         _config.permanentStayOn = _prefs.getBool("lp_stay_on", true); // Default: Stay on permanently
         _config.enabled = _prefs.getBool("lp_en", false);
-        _config.sleepIntervalMin = _prefs.getUInt("lp_sleep", 15);
-        _config.wakeWindowMin = _prefs.getUInt("lp_wake", 3);
+        _config.sleepIntervalMin = _prefs.getUInt("lp_sleep", 5);
+        _config.wakeWindowMin = _prefs.getUInt("lp_wake", 2);
         _prefs.end();
         Serial.printf("[PowerManager] Preferences loaded: PermanentStayOn=%d, LowPowerEn=%d\n", _config.permanentStayOn, _config.enabled);
     }

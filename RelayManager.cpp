@@ -59,6 +59,7 @@ void RelayManager::begin() {
     pinMode(_channels[0].pin, OUTPUT);
     pinMode(_channels[1].pin, OUTPUT);
     pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
 
     loadFromPreferences();
 
@@ -136,9 +137,8 @@ void RelayManager::applyPhysicalPin(uint8_t channelId) {
     uint8_t level = _channels[idx].activeLow ? (_channels[idx].state ? LOW : HIGH) : (_channels[idx].state ? HIGH : LOW);
     digitalWrite(_channels[idx].pin, level);
 
-    // Update Status LED (lights up if any relay is ON)
-    bool anyOn = _channels[0].state || _channels[1].state;
-    digitalWrite(STATUS_LED_PIN, anyOn ? HIGH : LOW);
+    // Keep onboard status LED OFF as requested
+    digitalWrite(STATUS_LED_PIN, LOW);
 }
 
 void RelayManager::setRelayState(uint8_t channelId, bool state) {
@@ -169,6 +169,7 @@ void RelayManager::toggleRelay(uint8_t channelId) {
     setRelayState(channelId, !_channels[channelId - 1].state);
 }
 
+/* Commented out for now
 void RelayManager::triggerPulse(uint8_t channelId, uint32_t pulseDurationMs) {
     if (channelId < 1 || channelId > 2) return;
     if (pulseDurationMs < 100) pulseDurationMs = 100;
@@ -188,6 +189,7 @@ void RelayManager::triggerPulse(uint8_t channelId, uint32_t pulseDurationMs) {
         xSemaphoreGive(_relayMutex);
     }
 }
+*/
 
 void RelayManager::setAllOff() {
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
@@ -375,7 +377,8 @@ void RelayManager::processEngine() {
     _processTicks++;
     uint32_t now = millis();
 
-    // Check momentary inching pulse completion (Fast sub-millisecond check)
+    // Check momentary inching pulse completion (Fast sub-millisecond check) - Commented out for now
+    /*
     for (int i = 0; i < 2; i++) {
         if (_pulseActive[i] && now >= _pulseEndTick[i]) {
             if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
@@ -389,6 +392,7 @@ void RelayManager::processEngine() {
             }
         }
     }
+    */
 
     // 1-second interval execution for Timers, Cycles & Schedules
     if (now - _lastOneSecondTick >= 1000) {
@@ -520,12 +524,13 @@ void RelayManager::checkSchedules() {
         }
 
         if (_channels[i].schedule.enabled) {
-            // Check day of week mask
-            if ((_channels[i].schedule.daysActive & dayBit) || (_channels[i].schedule.daysActive == 0xFF)) {
+            bool isDayActive = ((_channels[i].schedule.daysActive & dayBit) != 0) || (_channels[i].schedule.daysActive == 0xFF);
+            bool shouldBeOn = false;
+
+            if (isDayActive) {
                 uint32_t startSec = _channels[i].schedule.startHour * 3600 + _channels[i].schedule.startMinute * 60 + _channels[i].schedule.startSecond;
                 uint32_t endSec   = _channels[i].schedule.endHour * 3600 + _channels[i].schedule.endMinute * 60 + _channels[i].schedule.endSecond;
 
-                bool shouldBeOn = false;
                 if (startSec < endSec) {
                     // Standard same-day window (e.g. 08:00 to 18:00)
                     shouldBeOn = (currentSec >= startSec && currentSec < endSec);
@@ -533,17 +538,17 @@ void RelayManager::checkSchedules() {
                     // Overnight window spanning midnight (e.g. 20:00 to 06:00)
                     shouldBeOn = (currentSec >= startSec || currentSec < endSec);
                 }
+            }
 
-                if (_channels[i].state != shouldBeOn) {
-                    _channels[i].state = shouldBeOn;
-                    applyPhysicalPin(i + 1);
-                    
-                    char buf[64];
-                    snprintf(buf, sizeof(buf), "%s Schedule Trigger -> %s", _channels[i].name, shouldBeOn ? "ON" : "OFF");
-                    logEvent(buf);
+            if (_channels[i].state != shouldBeOn) {
+                _channels[i].state = shouldBeOn;
+                applyPhysicalPin(i + 1);
+                
+                char buf[64];
+                snprintf(buf, sizeof(buf), "%s Schedule Trigger -> %s", _channels[i].name, shouldBeOn ? "ON" : "OFF");
+                logEvent(buf);
 
-                    Serial.printf("[RelayManager] Schedule triggered: Relay %d -> %s\n", i + 1, shouldBeOn ? "ON" : "OFF");
-                }
+                Serial.printf("[RelayManager] Schedule triggered: Relay %d -> %s\n", i + 1, shouldBeOn ? "ON" : "OFF");
             }
         }
     }

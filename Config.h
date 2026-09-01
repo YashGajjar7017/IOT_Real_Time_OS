@@ -35,9 +35,9 @@
 // =====================================================================
 // LOW POWER / AP DUTY CYCLE CONFIGURATION
 // =====================================================================
-#define DEFAULT_AP_INACTIVITY_TIMEOUT_MS  (3 * 60 * 1000)   // 3 minutes before AP shuts down in Low Power Mode
-#define DEFAULT_AP_SLEEP_INTERVAL_MS      (15 * 60 * 1000)  // 15 minutes sleep interval before AP wakes up again
-#define DEFAULT_AP_WAKE_WINDOW_MS         (3 * 60 * 1000)   // 3 minutes discovery/connect window upon wake up
+#define DEFAULT_AP_INACTIVITY_TIMEOUT_MS  (2 * 60 * 1000)   // 2 minutes before AP shuts down in Low Power Mode
+#define DEFAULT_AP_SLEEP_INTERVAL_MS      (5 * 60 * 1000)   // 5 minutes sleep interval before AP wakes up again
+#define DEFAULT_AP_WAKE_WINDOW_MS         (2 * 60 * 1000)   // 2 minutes discovery/connect window upon wake up
 
 // =====================================================================
 // FREERTOS CONFIGURATION

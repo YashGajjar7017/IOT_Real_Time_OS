@@ -17,8 +17,8 @@ public:
     void toggleRelay(uint8_t channelId);
     void setAllOff();
     
-    // Inching / Pulse Trigger (0.5s - 10s momentary pulse)
-    void triggerPulse(uint8_t channelId, uint32_t pulseDurationMs);
+    // Inching / Pulse Trigger (0.5s - 10s momentary pulse) - Commented out for now
+    // void triggerPulse(uint8_t channelId, uint32_t pulseDurationMs);
 
     // Getters
     RelayChannel getChannel(uint8_t channelId);
