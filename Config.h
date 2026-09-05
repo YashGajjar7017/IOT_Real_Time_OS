@@ -4,16 +4,20 @@
 #include <Arduino.h>
 
 // =====================================================================
+// FIRMWARE VERSION
+// =====================================================================
+#define FIRMWARE_VERSION    "v2.0.0-OTA"
+
+// =====================================================================
 // HARDWARE PIN DEFINITIONS
 // =====================================================================
-// Relay 1 Pin (Default mapped to D1/GPIO 22 on standard ESP32 DevKit)
-// Note: If using NodeMCU-32S or specific shield, adjust pin as needed.
-#define RELAY_1_PIN         22   // D1 / GPIO22
+// Relay 1 Pin (Mapped to D2 / GPIO 2 on ESP32 DevKit)
+#define RELAY_1_PIN         2    // D2 / GPIO 2
 
-// Relay 2 Pin (Default mapped to D2/GPIO 21 on standard ESP32 DevKit)
-#define RELAY_2_PIN         21   // D2 / GPIO21
+// Relay 2 Pin (Mapped to D4 / GPIO 4 on ESP32 DevKit)
+#define RELAY_2_PIN         4    // D4 / GPIO 4
 
-// Built-in Status LED Pin (GPIO 2 on most ESP32 DevKit boards)
+// Built-in Status LED Pin (GPIO 2 / Blue LED on most ESP32 DevKit boards)
 #define STATUS_LED_PIN      2    // Onboard Blue LED
 
 // =====================================================================
@@ -30,6 +34,7 @@
 #define AP_IP_OCTET_4       1
 
 #define WEB_SERVER_PORT     80
+#define OTA_SERVER_PORT     500
 #define DNS_PORT            53
 
 // =====================================================================

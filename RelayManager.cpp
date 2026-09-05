@@ -17,7 +17,7 @@ RelayManager::RelayManager() :
     // Default Channel 1
     _channels[0].id = 1;
     _channels[0].pin = RELAY_1_PIN;
-    strncpy(_channels[0].name, "Relay 1 (D1)", sizeof(_channels[0].name) - 1);
+    strncpy(_channels[0].name, "Relay 1 (D2)", sizeof(_channels[0].name) - 1);
     _channels[0].state = false;
     _channels[0].activeLow = true;   // Standard relay module active low
     _channels[0].ratedWatts = 100.0f; // 100W default load
@@ -31,7 +31,7 @@ RelayManager::RelayManager() :
     // Default Channel 2
     _channels[1].id = 2;
     _channels[1].pin = RELAY_2_PIN;
-    strncpy(_channels[1].name, "Relay 2 (D2)", sizeof(_channels[1].name) - 1);
+    strncpy(_channels[1].name, "Relay 2 (D4)", sizeof(_channels[1].name) - 1);
     _channels[1].state = false;
     _channels[1].activeLow = true;
     _channels[1].ratedWatts = 100.0f;

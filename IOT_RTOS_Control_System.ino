@@ -2,19 +2,41 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <DNSServer.h>
+#include <Update.h>
 #include "Config.h"
 #include "TimeManager.h"
 #include "RelayManager.h"
 #include "PowerManager.h"
 #include "WebPages.h"
 
-// Web Server and Captive Portal DNS Server
+// Primary Web Server and Captive Portal DNS Server
 WebServer server(WEB_SERVER_PORT);
+
+// Secondary Dedicated OTA Server (Port 500)
+WebServer server500(OTA_SERVER_PORT);
 DNSServer dnsServer;
+
+// OTA & System State Management
+bool isPort500Enabled = false;       // Security: Disabled by default
+bool isRebootPending = false;
+unsigned long rebootAtMs = 0;
 
 // FreeRTOS Task Handles
 TaskHandle_t xRelayTaskHandle = NULL;
 TaskHandle_t xPowerTaskHandle = NULL;
+
+// Helper function to blink the status LED
+// 3 blinks = OTA update failure
+// 5 blinks = OTA update success
+void blinkStatusLed(int times, int delayMs = 150) {
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    for (int i = 0; i < times; i++) {
+        digitalWrite(STATUS_LED_PIN, HIGH);
+        delay(delayMs);
+        digitalWrite(STATUS_LED_PIN, LOW);
+        if (i < times - 1) delay(delayMs);
+    }
+}
 
 // Helper to read internal ESP32 chip temperature
 #ifdef __cplusplus
@@ -170,7 +192,11 @@ void handleStatus() {
         json += "{\"time\":\"" + String(logs[i].timestamp) + "\",\"msg\":\"" + String(logs[i].message) + "\"}";
         if (i < logCount - 1) json += ",";
     }
-    json += "]";
+    json += "],";
+
+    // System Firmware & Security Status
+    json += "\"fw_ver\":\"" + String(FIRMWARE_VERSION) + "\",";
+    json += "\"port500\":" + String(isPort500Enabled ? "true" : "false");
 
     json += "}";
 
@@ -364,6 +390,137 @@ void handleCaptivePortalRedirect() {
 }
 
 // =====================================================================
+// OVER-THE-AIR (OTA) FIRMWARE UPDATE HANDLERS
+// =====================================================================
+
+// Port 80 OTA Upload Completion Handler
+void handlePort80OtaUploadEnd() {
+    PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Connection", "close");
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+
+    if (!Update.hasError()) {
+        server.send(200, "text/plain", "OK");
+        RelayManager::getInstance().logEvent("OTA: Flash Success (Port 80)");
+        Serial.println("[OTA] Firmware Flashed Successfully via Port 80! Blinking LED 5 times...");
+        blinkStatusLed(5, 150);
+        isRebootPending = true;
+        rebootAtMs = millis() + 1000;
+    } else {
+        server.send(500, "text/plain", "Update Failed: " + String(Update.errorString()));
+        RelayManager::getInstance().logEvent("OTA: Flash Failed (Port 80)");
+        Serial.printf("[OTA] Flash Failed! Error: %s. Blinking LED 3 times...\n", Update.errorString());
+        blinkStatusLed(3, 150);
+    }
+}
+
+// Port 80 OTA Chunk Processor
+void handlePort80OtaChunk() {
+    HTTPUpload& upload = server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        Serial.printf("[OTA] Port 80 Update Start: %s\n", upload.filename.c_str());
+        RelayManager::getInstance().logEvent("OTA: Upload Started (Port 80)");
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (Update.end(true)) {
+            Serial.printf("[OTA] Port 80 Update Size: %u bytes\n", upload.totalSize);
+        } else {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_ABORTED) {
+        Update.end();
+        Serial.println("[OTA] Port 80 Update Aborted");
+    }
+}
+
+// Port 500 Security Toggle Handler
+void handlePort500Toggle() {
+    PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+
+    if (server.hasArg("enable")) {
+        bool enable = (server.arg("enable").toInt() == 1);
+        if (enable) {
+            if (!isPort500Enabled) {
+                server500.begin();
+                isPort500Enabled = true;
+                RelayManager::getInstance().logEvent("Port 500 OTA Server: ENABLED");
+                Serial.println("[WebServer] Port 500 OTA Server Started");
+            }
+            server.send(200, "text/plain", "Port 500 Enabled");
+        } else {
+            if (isPort500Enabled) {
+                server500.stop();
+                isPort500Enabled = false;
+                RelayManager::getInstance().logEvent("Port 500 OTA Server: DISABLED");
+                Serial.println("[WebServer] Port 500 OTA Server Stopped");
+            }
+            server.send(200, "text/plain", "Port 500 Disabled");
+        }
+    } else {
+        server.send(400, "text/plain", "Missing enable param");
+    }
+}
+
+// Configure Dedicated Port 500 Web Server Endpoints
+void setupServer500() {
+    // Dedicated OTA Landing Portal
+    server500.on("/", HTTP_GET, []() {
+        PowerManager::getInstance().registerUserActivity();
+        server500.send_P(200, "text/html", OTA_HTML);
+    });
+
+    // Dedicated OTA Upload Endpoint on Port 500
+    server500.on("/update", HTTP_POST, []() {
+        PowerManager::getInstance().registerUserActivity();
+        server500.sendHeader("Connection", "close");
+        server500.sendHeader("Access-Control-Allow-Origin", "*");
+
+        if (!Update.hasError()) {
+            server500.send(200, "text/plain", "OK");
+            RelayManager::getInstance().logEvent("OTA: Flash Success (Port 500)");
+            Serial.println("[OTA] Firmware Flashed Successfully via Port 500! Blinking LED 5 times...");
+            blinkStatusLed(5, 150);
+            isRebootPending = true;
+            rebootAtMs = millis() + 1000;
+        } else {
+            server500.send(500, "text/plain", "Update Failed: " + String(Update.errorString()));
+            RelayManager::getInstance().logEvent("OTA: Flash Failed (Port 500)");
+            Serial.printf("[OTA] Flash Failed! Error: %s. Blinking LED 3 times...\n", Update.errorString());
+            blinkStatusLed(3, 150);
+        }
+    }, []() {
+        HTTPUpload& upload = server500.upload();
+        if (upload.status == UPLOAD_FILE_START) {
+            Serial.printf("[OTA] Port 500 Update Start: %s\n", upload.filename.c_str());
+            RelayManager::getInstance().logEvent("OTA: Upload Started (Port 500)");
+            if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+                Update.printError(Serial);
+            }
+        } else if (upload.status == UPLOAD_FILE_WRITE) {
+            if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+                Update.printError(Serial);
+            }
+        } else if (upload.status == UPLOAD_FILE_END) {
+            if (Update.end(true)) {
+                Serial.printf("[OTA] Port 500 Update Size: %u bytes\n", upload.totalSize);
+            } else {
+                Update.printError(Serial);
+            }
+        } else if (upload.status == UPLOAD_FILE_ABORTED) {
+            Update.end();
+            Serial.println("[OTA] Port 500 Update Aborted");
+        }
+    });
+}
+
+// =====================================================================
 // FREERTOS TASKS
 // =====================================================================
 
@@ -435,6 +592,13 @@ void setup() {
     server.on("/api/settings", HTTP_POST, handleSettingsUpdate);
     server.on("/api/all_off", HTTP_POST, handleEmergencyAllOff);
 
+    // OTA Firmware Upload & Port 500 Security endpoints
+    server.on("/api/ota/upload", HTTP_POST, handlePort80OtaUploadEnd, handlePort80OtaChunk);
+    server.on("/api/ota/port500", HTTP_POST, handlePort500Toggle);
+
+    // Initialize Port 500 endpoints (server starts when enabled from GUI)
+    setupServer500();
+
     // Captive portal probes
     server.on("/generate_204", HTTP_GET, handleCaptivePortalRedirect);
     server.on("/hotspot-detect.html", HTTP_GET, handleCaptivePortalRedirect);
@@ -484,6 +648,17 @@ void loop() {
     if (!PowerManager::getInstance().isApSleeping()) {
         dnsServer.processNextRequest();
         server.handleClient();
+        if (isPort500Enabled) {
+            server500.handleClient();
+        }
     }
+
+    // Process delayed system reboot after successful OTA update
+    if (isRebootPending && millis() >= rebootAtMs) {
+        Serial.println("[System] Rebooting ESP32 into new firmware...");
+        delay(100);
+        ESP.restart();
+    }
+
     delay(2); // Short yield for FreeRTOS scheduler
 }

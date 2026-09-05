@@ -3,6 +3,222 @@
 
 #include <Arduino.h>
 
+// =====================================================================
+// DEDICATED PORT 500 OTA FIRMWARE UPDATE PORTAL HTML
+// =====================================================================
+const char OTA_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ESP32 OTA Firmware Flashing Station (Port 500)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(0, 229, 255, 0.12) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.10) 0%, transparent 50%);
+      --card-bg: rgba(30, 41, 59, 0.90);
+      --card-inner-bg: #131b2a;
+      --card-border: rgba(255, 255, 255, 0.15);
+      --primary: #00e5ff;
+      --primary-glow: rgba(0, 229, 255, 0.4);
+      --success: #00e676;
+      --success-glow: rgba(0, 230, 118, 0.4);
+      --danger: #ff3366;
+      --warning: #ffb703;
+      --text: #ffffff;
+      --text-sub: #cbd5e1;
+      --text-muted: #94a3b8;
+      --input-bg: #1e293b;
+      --card-radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); background-image: var(--bg-gradient); color: var(--text); min-height: 100vh; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .container { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 18px; }
+    .card { background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 10px 35px rgba(0,0,0,0.4); }
+    .header-box { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), #3b82f6); display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 16px var(--primary-glow); }
+    .title-box h1 { font-size: 18px; font-weight: 700; color: #fff; }
+    .title-box p { font-size: 12px; color: var(--text-sub); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 11px; font-weight: 700; background: rgba(0, 229, 255, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 8px; width: fit-content; }
+    .dropzone { border: 2px dashed rgba(0, 229, 255, 0.4); background: var(--card-inner-bg); border-radius: 14px; padding: 26px 16px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: rgba(0, 229, 255, 0.06); transform: scale(1.01); }
+    .drop-icon { font-size: 32px; }
+    .file-info { display: none; background: var(--card-inner-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #fff; justify-content: space-between; align-items: center; }
+    .btn { padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 800; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), #00b0ff); color: #000; box-shadow: 0 4px 16px var(--primary-glow); }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+    .btn-secondary { background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: #fff; font-size: 12px; text-decoration: none; padding: 10px 16px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .progress-box { display: none; flex-direction: column; gap: 6px; background: var(--card-inner-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 14px; }
+    .progress-track { width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); width: 0%; transition: width 0.2s; }
+    .status-msg { display: none; padding: 12px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; line-height: 1.4; }
+    .status-success { background: rgba(0, 230, 118, 0.15); border: 1px solid var(--success); color: var(--success); }
+    .status-error { background: rgba(255, 51, 102, 0.15); border: 1px solid var(--danger); color: #ff6b8b; }
+    .info-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px 14px; font-size: 11px; color: var(--text-sub); display: flex; flex-direction: column; gap: 4px; line-height: 1.4; }
+    .info-card b { color: #fff; }
+    .footer { text-align: center; font-size: 11px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header-box">
+        <div class="logo-icon">🚀</div>
+        <div class="title-box">
+          <h1>OTA Firmware Flashing Station</h1>
+          <p>ESP32 Dedicated Port 500 Secure Service</p>
+        </div>
+      </div>
+
+      <div class="badge">🔒 Port 500 Active &bull; Current FW: v2.0.0-OTA</div>
+
+      <input type="file" id="firmwareFile" accept=".bin" style="display:none;" onchange="handleFileSelected(event)">
+
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('firmwareFile').click()">
+        <span class="drop-icon">📦</span>
+        <div style="font-weight:700; font-size:14px; color:#fff;">Click or Drag & Drop Compiled .bin File</div>
+        <div style="font-size:12px; color:var(--text-sub);">Select standard ESP32 binary firmware image (.bin)</div>
+      </div>
+
+      <div class="file-info" id="fileInfoBox">
+        <span id="fileNameText" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%;">firmware.bin</span>
+        <span id="fileSizeText" style="color:var(--primary); font-family:monospace;">0 KB</span>
+      </div>
+
+      <div class="progress-box" id="progressContainer">
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <span id="progressStatusText" style="color:var(--primary); font-weight:700;">Uploading firmware...</span>
+          <span id="progressPctText" style="font-weight:800; font-family:monospace; color:var(--primary);">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+      </div>
+
+      <div class="status-msg" id="statusBox"></div>
+
+      <button class="btn btn-primary" id="uploadBtn" onclick="uploadFirmware()" disabled>⚡ Flash Firmware to ESP32</button>
+
+      <div class="info-card">
+        <div>💡 <b>LED Status Indicator Rules:</b></div>
+        <div>• <b>Blue LED Blinks 5 Times:</b> Update Success! System will auto-restart.</div>
+        <div>• <b>Blue LED Blinks 3 Times:</b> Update Failed. Check compiled binary.</div>
+      </div>
+
+      <a href="http://192.168.4.1/" class="btn btn-secondary">⬅️ Return to Main Web Control (Port 80)</a>
+    </div>
+
+    <div class="footer">
+      <span>ESP32 Real-Time Dual Relay Controller</span>
+      <span>OTA Server running on Port 500</span>
+    </div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('firmwareFile');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        selectFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleFileSelected(e) {
+      if (e.target.files.length > 0) {
+        selectFile(e.target.files[0]);
+      }
+    }
+
+    function selectFile(file) {
+      if (!file.name.endsWith('.bin')) {
+        alert('Please select a compiled ESP32 .bin file.');
+        return;
+      }
+      selectedFile = file;
+      document.getElementById('fileNameText').innerText = file.name;
+      document.getElementById('fileSizeText').innerText = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('fileInfoBox').style.display = 'flex';
+      uploadBtn.disabled = false;
+    }
+
+    function uploadFirmware() {
+      if (!selectedFile) return;
+      uploadBtn.disabled = true;
+      dropzone.style.pointerEvents = 'none';
+
+      const progressBox = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const progressStatus = document.getElementById('progressStatusText');
+      const progressPct = document.getElementById('progressPctText');
+      const statusBox = document.getElementById('statusBox');
+
+      progressBox.style.display = 'flex';
+      statusBox.style.display = 'none';
+      progressBar.style.width = '0%';
+      progressPct.innerText = '0%';
+      progressStatus.innerText = 'Uploading firmware to OTA partition...';
+
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('update', selectedFile, selectedFile.name);
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = pct + '%';
+          progressPct.innerText = pct + '%';
+          if (pct === 100) {
+            progressStatus.innerText = 'Flashing Flash Partition & Validating CRC...';
+          }
+        }
+      });
+
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            statusBox.className = 'status-msg status-success';
+            statusBox.innerHTML = '🎉 <b>OTA Update Success!</b><br>Blue LED is blinking <b>5 times</b>.<br>Device is restarting with new firmware in 3 seconds...';
+            statusBox.style.display = 'block';
+            progressStatus.innerText = 'Flashing Complete!';
+            setTimeout(() => { window.location.href = 'http://192.168.4.1/'; }, 4500);
+          } else {
+            statusBox.className = 'status-msg status-error';
+            statusBox.innerHTML = '❌ <b>OTA Update Failed!</b><br>Blue LED is blinking <b>3 times</b>.<br>Error: ' + (xhr.responseText || 'Verification failed. Please retry.');
+            statusBox.style.display = 'block';
+            uploadBtn.disabled = false;
+            dropzone.style.pointerEvents = 'auto';
+            progressStatus.innerText = 'Flash Error!';
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        statusBox.className = 'status-msg status-error';
+        statusBox.innerHTML = '❌ <b>Network/Upload Error!</b><br>Blue LED blinking 3 times on failure. Check connection.';
+        statusBox.style.display = 'block';
+        uploadBtn.disabled = false;
+        dropzone.style.pointerEvents = 'auto';
+      };
+
+      xhr.open('POST', '/update', true);
+      xhr.send(formData);
+    }
+  </script>
+</body>
+</html>
+)rawliteral";
+
+// =====================================================================
+// MAIN WEB DASHBOARD UI (PORT 80)
+// =====================================================================
 const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -158,6 +374,21 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .modal-title { font-size: 16px; font-weight: 700; color: #fff; }
     .close-btn { background: transparent; border: none; color: var(--text-sub); font-size: 24px; cursor: pointer; }
 
+    /* Footer */
+    .footer-card { background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); margin-top: 4px; }
+    .footer-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .footer-brand { display: flex; align-items: center; gap: 10px; }
+    .footer-icon { font-size: 20px; color: var(--primary); }
+    .footer-title { font-size: 13px; font-weight: 700; color: #fff; }
+    .footer-pins { font-size: 11px; color: var(--text-sub); }
+    .footer-pins b { color: var(--primary); }
+    .footer-badges { display: flex; gap: 6px; align-items: center; }
+    .version-badge { font-family: monospace; font-size: 11px; font-weight: 700; background: rgba(0, 229, 255, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 3px 8px; border-radius: 6px; }
+    .port500-badge { font-family: monospace; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+    .port500-badge.enabled { background: rgba(0, 230, 118, 0.2); border: 1px solid var(--success); color: var(--success); }
+    .port500-badge.disabled { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-muted); }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; font-size: 11px; color: var(--text-muted); }
+
     /* Toast Notification */
     #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; border: 1px solid var(--primary); color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 13px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.3s ease; z-index: 200; pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -226,7 +457,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div class="relay-card" id="relayCard1">
       <div class="relay-header">
         <div class="relay-title">
-          <span id="r1Name">Relay 1 (D1)</span>
+          <span id="r1Name">Relay 1 (D2)</span>
         </div>
         <span class="relay-badge badge-off" id="r1Badge">OFF</span>
       </div>
@@ -371,7 +602,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div class="relay-card" id="relayCard2">
       <div class="relay-header">
         <div class="relay-title">
-          <span id="r2Name">Relay 2 (D2)</span>
+          <span id="r2Name">Relay 2 (D4)</span>
         </div>
         <span class="relay-badge badge-off" id="r2Badge">OFF</span>
       </div>
@@ -563,6 +794,27 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       <!-- Master Emergency Kill Switch -->
       <button class="master-btn" onclick="killAllRelays()">🚨 EMERGENCY ALL OFF</button>
     </div>
+
+    <!-- System Footer with Firmware Version & Pin Mapping -->
+    <footer class="footer-card">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="footer-icon">⚡</span>
+          <div>
+            <div class="footer-title">ESP32 RTOS Control System</div>
+            <div class="footer-pins">Relay 1: <b>D2 (GPIO 2)</b> &bull; Relay 2: <b>D4 (GPIO 4)</b></div>
+          </div>
+        </div>
+        <div class="footer-badges">
+          <span class="version-badge" id="footerFwVer">FW: v2.0.0-OTA</span>
+          <span class="port500-badge disabled" id="footerPort500Status">Port 500: OFF</span>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>Dual-Core FreeRTOS &bull; Standalone AP Server</span>
+        <span id="footerOtaHint">OTA Firmware Flasher Ready</span>
+      </div>
+    </footer>
   </div>
 
   <!-- Settings Modal -->
@@ -641,6 +893,46 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             <option value="1">Always Boot ON</option>
             <option value="2">Restore Previous State before Power Cut</option>
           </select>
+        </div>
+      </div>
+
+      <!-- OTA Firmware Update & Port 500 Security Section -->
+      <div class="form-group" style="border-top:1px solid var(--card-border); padding-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label class="form-label" style="font-weight:700; color:var(--primary); font-size:13px;">⚡ OTA Firmware Update</label>
+          <span class="version-badge" id="modalFwVer">v2.0.0-OTA</span>
+        </div>
+        
+        <!-- Port 500 Security Toggle -->
+        <div style="background:var(--card-inner-bg); border:1px solid var(--card-border); border-radius:10px; padding:10px 12px; margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; font-weight:700; color:#fff;">Port 500 OTA Server (Security)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="port500EnSwitch" onchange="togglePort500(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <span style="font-size:11px; color:var(--text-sub);">Disabled by default for security. When enabled, open dedicated flasher at <a id="port500Link" href="http://192.168.4.1:500" target="_blank" style="color:var(--primary); text-decoration:underline; display:none;">http://192.168.4.1:500</a></span>
+        </div>
+
+        <!-- Port 80 Direct Firmware Flashing -->
+        <div style="background:var(--card-inner-bg); border:1px solid var(--card-border); border-radius:10px; padding:12px; margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:12px; font-weight:700; color:#fff;">Upload .bin Firmware via Port 80:</span>
+          <input type="file" id="port80FileInput" accept=".bin" class="input-box" style="padding:6px; font-size:11px;" onchange="onPort80FileSelected()">
+          <div id="port80FileInfo" style="display:none; font-size:11px; color:var(--primary); font-family:monospace;"></div>
+          
+          <div id="port80ProgressBox" style="display:none; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px;">
+              <span id="port80ProgressStatus" style="color:var(--primary);">Uploading...</span>
+              <span id="port80ProgressPct" style="font-weight:700; color:var(--primary);">0%</span>
+            </div>
+            <div class="progress-track" style="height:6px;">
+              <div class="progress-fill" id="port80ProgressBar"></div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" id="port80UploadBtn" style="padding:8px 12px; font-size:12px;" onclick="uploadFirmwarePort80()" disabled>🚀 Upload & Flash Firmware</button>
+          <span style="font-size:10px; color:var(--text-muted); line-height:1.3;">💡 Blue LED will blink <b>5 times</b> on success (followed by auto-restart) or <b>3 times</b> if the update fails.</span>
         </div>
       </div>
 
@@ -1194,6 +1486,30 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           document.getElementById('telemPowerTicks').innerText = data.telem.rtos_power_ticks;
         }
 
+        // Firmware Version & Port 500 Status in Footer & Settings Modal
+        if (data.fw_ver) {
+          document.getElementById('footerFwVer').innerText = `FW: ${data.fw_ver}`;
+          const mFw = document.getElementById('modalFwVer');
+          if (mFw) mFw.innerText = data.fw_ver;
+        }
+        if (data.port500 !== undefined) {
+          const p500Switch = document.getElementById('port500EnSwitch');
+          if (!isModalOpen && p500Switch) p500Switch.checked = data.port500;
+          const p500Badge = document.getElementById('footerPort500Status');
+          const p500Link = document.getElementById('port500Link');
+          if (p500Badge) {
+            if (data.port500) {
+              p500Badge.className = 'port500-badge enabled';
+              p500Badge.innerText = 'Port 500: Active';
+              if (p500Link) p500Link.style.display = 'inline';
+            } else {
+              p500Badge.className = 'port500-badge disabled';
+              p500Badge.innerText = 'Port 500: OFF';
+              if (p500Link) p500Link.style.display = 'none';
+            }
+          }
+        }
+
         // Event Logs Stream
         if (data.logs && data.logs.length > 0) {
           const logBox = document.getElementById('eventLogContainer');
@@ -1212,6 +1528,107 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       } catch (err) {
         console.error('Polling error:', err);
       }
+    }
+
+    // Port 500 OTA Toggle
+    async function togglePort500(en) {
+      try {
+        const res = await fetch('/api/ota/port500', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `enable=${en ? 1 : 0}`
+        });
+        if (res.ok) {
+          showToast(`Port 500 OTA Server ${en ? 'Enabled' : 'Disabled'}`);
+          fetchStatus();
+        }
+      } catch(err) {
+        showToast('Failed to toggle Port 500');
+      }
+    }
+
+    // Port 80 OTA File Selection
+    let port80File = null;
+    function onPort80FileSelected() {
+      const input = document.getElementById('port80FileInput');
+      const info = document.getElementById('port80FileInfo');
+      const btn = document.getElementById('port80UploadBtn');
+      if (input.files.length > 0) {
+        port80File = input.files[0];
+        if (!port80File.name.endsWith('.bin')) {
+          showToast('Please select a compiled .bin firmware file');
+          input.value = '';
+          port80File = null;
+          info.style.display = 'none';
+          btn.disabled = true;
+          return;
+        }
+        info.innerText = `Selected: ${port80File.name} (${(port80File.size / 1024).toFixed(1)} KB)`;
+        info.style.display = 'block';
+        btn.disabled = false;
+      } else {
+        port80File = null;
+        info.style.display = 'none';
+        btn.disabled = true;
+      }
+    }
+
+    // Port 80 OTA Firmware Upload & Flash
+    function uploadFirmwarePort80() {
+      if (!port80File) return;
+      const btn = document.getElementById('port80UploadBtn');
+      const pBox = document.getElementById('port80ProgressBox');
+      const pBar = document.getElementById('port80ProgressBar');
+      const pStatus = document.getElementById('port80ProgressStatus');
+      const pPct = document.getElementById('port80ProgressPct');
+
+      btn.disabled = true;
+      pBox.style.display = 'flex';
+      pBar.style.width = '0%';
+      pPct.innerText = '0%';
+      pStatus.innerText = 'Uploading firmware to OTA partition...';
+      pStatus.style.color = 'var(--primary)';
+
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('update', port80File, port80File.name);
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          pBar.style.width = pct + '%';
+          pPct.innerText = pct + '%';
+          if (pct === 100) {
+            pStatus.innerText = 'Writing Flash & Verifying CRC...';
+          }
+        }
+      });
+
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            pStatus.innerText = '🎉 OTA Success! Blue LED blinking 5 times...';
+            pStatus.style.color = 'var(--success)';
+            showToast('Firmware Flashed Successfully! Rebooting...');
+            setTimeout(() => { location.reload(); }, 4500);
+          } else {
+            pStatus.innerText = '❌ OTA Failed! Blue LED blinking 3 times.';
+            pStatus.style.color = 'var(--danger)';
+            showToast('OTA Firmware Flash Failed');
+            btn.disabled = false;
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        pStatus.innerText = '❌ Upload Network Error! Blue LED blinking 3 times.';
+        pStatus.style.color = 'var(--danger)';
+        showToast('Upload network error');
+        btn.disabled = false;
+      };
+
+      xhr.open('POST', '/api/ota/upload', true);
+      xhr.send(formData);
     }
 
     // Auto-poll status every 1 second
