@@ -9,13 +9,22 @@
 #define FIRMWARE_VERSION    "v2.0.0-OTA"
 
 // =====================================================================
-// HARDWARE PIN DEFINITIONS
+// HARDWARE PIN DEFINITIONS (ESP32 DevKit 4-Channel Relay)
 // =====================================================================
-// Relay 1 Pin (Mapped to D2 / GPIO 2 on ESP32 DevKit)
-#define RELAY_1_PIN         2    // D2 / GPIO 2
+// Relay 1 Pin (Mapped to D5 / GPIO 5 on ESP32 DevKit)
+#define RELAY_1_PIN         5    // D5 / GPIO 5
 
-// Relay 2 Pin (Mapped to D4 / GPIO 4 on ESP32 DevKit)
-#define RELAY_2_PIN         4    // D4 / GPIO 4
+// Relay 2 Pin (Mapped to D18 / GPIO 18 on ESP32 DevKit)
+#define RELAY_2_PIN         18   // D18 / GPIO 18
+
+// Relay 3 Pin (Mapped to D19 / GPIO 19 on ESP32 DevKit)
+#define RELAY_3_PIN         19   // D19 / GPIO 19
+
+// Relay 4 Pin (Mapped to D21 / GPIO 21 on ESP32 DevKit)
+#define RELAY_4_PIN         21   // D21 / GPIO 21
+
+// Number of relay channels
+#define NUM_RELAY_CHANNELS  4
 
 // Built-in Status LED Pin (GPIO 2 / Blue LED on most ESP32 DevKit boards)
 #define STATUS_LED_PIN      2    // Onboard Blue LED

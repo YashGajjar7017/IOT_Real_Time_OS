@@ -110,7 +110,7 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     </div>
 
     <div class="footer">
-      <span>ESP32 Real-Time Dual Relay Controller</span>
+      <span>ESP32 Real-Time Quad Relay Controller</span>
       <span>OTA Server running on Port 500</span>
     </div>
   </div>
@@ -224,7 +224,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ESP32 Real-Time OS Dual Relay Controller</title>
+  <title>ESP32 Real-Time OS 4-Channel Relay Controller</title>
   <style>
     :root {
       --bg: #141824;
@@ -247,7 +247,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: var(--bg); background-image: var(--bg-gradient); color: var(--text); min-height: 100vh; padding: 16px; display: flex; flex-direction: column; align-items: center; }
-    .container { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 16px; }
+    .container { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 16px; }
     
     /* Header */
     header { background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,0.35); }
@@ -301,13 +301,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
     input:checked + .slider { background-color: var(--success); box-shadow: 0 0 14px var(--success-glow); }
     input:checked + .slider:before { transform: translateX(26px); }
-
-    /* Inching / Quick Pulse Action (Commented out) */
-    /*
-    .pulse-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(255,255,255,0.04); border: 1px dashed var(--card-border); padding: 8px 12px; border-radius: 10px; }
-    .pulse-btn { background: rgba(0, 229, 255, 0.15); border: 1px solid var(--primary); color: #fff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-    .pulse-btn:active { background: var(--primary); color: #000; }
-    */
 
     /* Tabs inside Relay */
     .tab-nav { display: flex; gap: 6px; background: var(--card-inner-bg); border: 1px solid var(--card-border); padding: 4px; border-radius: 10px; }
@@ -369,7 +362,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     /* Modal */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
     .modal-overlay.open { display: flex; }
-    .modal { background: #1a2233; border: 1px solid var(--card-border); border-radius: var(--card-radius); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+    .modal { background: #1a2233; border: 1px solid var(--card-border); border-radius: var(--card-radius); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px; }
     .modal-title { font-size: 16px; font-weight: 700; color: #fff; }
     .close-btn { background: transparent; border: none; color: var(--text-sub); font-size: 24px; cursor: pointer; }
@@ -380,7 +373,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .footer-brand { display: flex; align-items: center; gap: 10px; }
     .footer-icon { font-size: 20px; color: var(--primary); }
     .footer-title { font-size: 13px; font-weight: 700; color: #fff; }
-    .footer-pins { font-size: 11px; color: var(--text-sub); }
+    .footer-pins { font-size: 11px; color: var(--text-sub); line-height: 1.4; }
     .footer-pins b { color: var(--primary); }
     .footer-badges { display: flex; gap: 6px; align-items: center; }
     .version-badge { font-family: monospace; font-size: 11px; font-weight: 700; background: rgba(0, 229, 255, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 3px 8px; border-radius: 6px; }
@@ -402,7 +395,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       <div class="logo-area">
         <div class="logo-icon">⚡</div>
         <div class="title-box">
-          <h1>ESP32 Real-Time Dual Relay</h1>
+          <h1>ESP32 Real-Time Quad Relay</h1>
           <p>Real-Time OS Multi-Tasking & Power Control</p>
         </div>
       </div>
@@ -443,7 +436,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       </div>
       <div class="energy-subgrid">
         <div class="energy-subitem">
-          <span class="energy-subtitle">Total Runtime (All Relays)</span>
+          <span class="energy-subtitle">Total Runtime (All 4 Relays)</span>
           <span class="energy-subval" id="totalRuntimeVal">0h 0m</span>
         </div>
         <div class="energy-subitem">
@@ -457,7 +450,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div class="relay-card" id="relayCard1">
       <div class="relay-header">
         <div class="relay-title">
-          <span id="r1Name">Relay 1 (D2)</span>
+          <span id="r1Name">Relay 1 (D5)</span>
         </div>
         <span class="relay-badge badge-off" id="r1Badge">OFF</span>
       </div>
@@ -602,7 +595,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div class="relay-card" id="relayCard2">
       <div class="relay-header">
         <div class="relay-title">
-          <span id="r2Name">Relay 2 (D4)</span>
+          <span id="r2Name">Relay 2 (D18)</span>
         </div>
         <span class="relay-badge badge-off" id="r2Badge">OFF</span>
       </div>
@@ -743,6 +736,296 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- Relay 3 Card -->
+    <div class="relay-card" id="relayCard3">
+      <div class="relay-header">
+        <div class="relay-title">
+          <span id="r3Name">Relay 3 (D19)</span>
+        </div>
+        <span class="relay-badge badge-off" id="r3Badge">OFF</span>
+      </div>
+
+      <!-- Main Toggle Switch -->
+      <div class="switch-row">
+        <span class="switch-label">Manual Output State</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="r3Switch" onchange="toggleRelay(3, this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Live Timer Info (Shown if active) -->
+      <div class="live-prog-box" id="r3TimerLiveBox" style="display:none;">
+        <div class="live-prog-header">
+          <span id="r3TimerPhase">Timer: Active</span>
+          <span class="live-prog-val" id="r3TimerCountdown">00:00</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="r3TimerProgress"></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px; font-size:11px; margin-top:2px;" onclick="cancelTimer(3)">Cancel Countdown</button>
+      </div>
+
+      <!-- Live Cycle Info (Shown if active) -->
+      <div class="live-prog-box" id="r3CycleLiveBox" style="display:none; background:rgba(0, 230, 118, 0.1); border-color:rgba(0,230,118,0.3);">
+        <div class="live-prog-header">
+          <span id="r3CyclePhase">🔁 Cycle Running</span>
+          <span class="live-prog-val" id="r3CycleCountdown" style="color:var(--success);">00:00</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="r3CycleProgress"></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px; font-size:11px; margin-top:2px;" onclick="cancelCycle(3)">Stop Cycle Loop</button>
+      </div>
+
+      <!-- Tabs for Timers, Cycles & Schedules -->
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab(3, 'timer')">⏱️ Timer</button>
+        <button class="tab-btn" onclick="switchTab(3, 'cycle')">🔁 Cycle</button>
+        <button class="tab-btn" onclick="switchTab(3, 'sched')">📅 Schedule</button>
+        <button class="tab-btn" onclick="switchTab(3, 'stats')">📊 Energy</button>
+      </div>
+
+      <!-- Tab: Countdown Timer -->
+      <div class="tab-pane active" id="r3TabTimer">
+        <div class="form-group">
+          <label class="form-label">Start Delay (Turn ON after):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r3DelayMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r3DelaySec" placeholder="Secs" min="0" max="59" value="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ON Duration (Stay ON for):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r3DurMin" placeholder="Mins" min="0" value="10">
+            <input type="number" class="input-box" id="r3DurSec" placeholder="Secs" min="0" max="59" value="0">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="setTimer(3)">Start Countdown Timer</button>
+      </div>
+
+      <!-- Tab: Cyclic Automation -->
+      <div class="tab-pane" id="r3TabCycle">
+        <div class="form-group">
+          <label class="form-label">ON Time per Cycle (Secs/Mins):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r3CycOnMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r3CycOnSec" placeholder="Secs" min="1" value="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">OFF Time per Cycle (Secs/Mins):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r3CycOffMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r3CycOffSec" placeholder="Secs" min="1" value="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Cycles (0 = Infinite Loop):</label>
+          <input type="number" class="input-box" id="r3CycTotal" placeholder="0 = Continuous Infinite Loop" min="0" value="0">
+        </div>
+        <button class="btn btn-primary" onclick="setCycle(3)">Start Cycle Automation</button>
+      </div>
+
+      <!-- Tab: Daily Schedule -->
+      <div class="tab-pane" id="r3TabSched">
+        <div class="form-group">
+          <label class="form-label">Daily Turn ON Time (HH:MM):</label>
+          <input type="time" class="input-box" id="r3SchedStart" value="08:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Daily Turn OFF Time (HH:MM):</label>
+          <input type="time" class="input-box" id="r3SchedEnd" value="18:00">
+        </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Active Weekdays:</label>
+            <div class="day-presets">
+              <button type="button" class="preset-btn" onclick="selectDayPreset(3, 'all')">All</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(3, 'weekdays')">Mon-Fri</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(3, 'weekends')">Sat-Sun</button>
+            </div>
+          </div>
+          <div class="weekday-bar" id="r3WeekdayBar">
+            <div class="day-btn selected" data-day="0" onclick="toggleDay(3, 0)">Sun</div>
+            <div class="day-btn selected" data-day="1" onclick="toggleDay(3, 1)">Mon</div>
+            <div class="day-btn selected" data-day="2" onclick="toggleDay(3, 2)">Tue</div>
+            <div class="day-btn selected" data-day="3" onclick="toggleDay(3, 3)">Wed</div>
+            <div class="day-btn selected" data-day="4" onclick="toggleDay(3, 4)">Thu</div>
+            <div class="day-btn selected" data-day="5" onclick="toggleDay(3, 5)">Fri</div>
+            <div class="day-btn selected" data-day="6" onclick="toggleDay(3, 6)">Sat</div>
+          </div>
+        </div>
+        <div class="input-row" style="align-items:center; justify-content:space-between; margin-top:4px;">
+          <span style="font-size:12px; color:var(--text-sub); font-weight:600;">Enable Daily Schedule</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="r3SchedEn" onchange="setSchedule(3)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab: Stats -->
+      <div class="tab-pane" id="r3TabStats">
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="telem-title">Total ON Runtime</span>
+            <span class="stat-val" id="r3TotTime">0h 0m</span>
+          </div>
+          <div class="stat-item">
+            <span class="telem-title">Est. Energy Consumed</span>
+            <span class="stat-val" id="r3Energy">0.000 kWh</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relay 4 Card -->
+    <div class="relay-card" id="relayCard4">
+      <div class="relay-header">
+        <div class="relay-title">
+          <span id="r4Name">Relay 4 (D21)</span>
+        </div>
+        <span class="relay-badge badge-off" id="r4Badge">OFF</span>
+      </div>
+
+      <!-- Main Toggle Switch -->
+      <div class="switch-row">
+        <span class="switch-label">Manual Output State</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="r4Switch" onchange="toggleRelay(4, this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Live Timer Info (Shown if active) -->
+      <div class="live-prog-box" id="r4TimerLiveBox" style="display:none;">
+        <div class="live-prog-header">
+          <span id="r4TimerPhase">Timer: Active</span>
+          <span class="live-prog-val" id="r4TimerCountdown">00:00</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="r4TimerProgress"></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px; font-size:11px; margin-top:2px;" onclick="cancelTimer(4)">Cancel Countdown</button>
+      </div>
+
+      <!-- Live Cycle Info (Shown if active) -->
+      <div class="live-prog-box" id="r4CycleLiveBox" style="display:none; background:rgba(0, 230, 118, 0.1); border-color:rgba(0,230,118,0.3);">
+        <div class="live-prog-header">
+          <span id="r4CyclePhase">🔁 Cycle Running</span>
+          <span class="live-prog-val" id="r4CycleCountdown" style="color:var(--success);">00:00</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="r4CycleProgress"></div>
+        </div>
+        <button class="btn btn-danger" style="padding:5px 10px; font-size:11px; margin-top:2px;" onclick="cancelCycle(4)">Stop Cycle Loop</button>
+      </div>
+
+      <!-- Tabs for Timers, Cycles & Schedules -->
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab(4, 'timer')">⏱️ Timer</button>
+        <button class="tab-btn" onclick="switchTab(4, 'cycle')">🔁 Cycle</button>
+        <button class="tab-btn" onclick="switchTab(4, 'sched')">📅 Schedule</button>
+        <button class="tab-btn" onclick="switchTab(4, 'stats')">📊 Energy</button>
+      </div>
+
+      <!-- Tab: Countdown Timer -->
+      <div class="tab-pane active" id="r4TabTimer">
+        <div class="form-group">
+          <label class="form-label">Start Delay (Turn ON after):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r4DelayMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r4DelaySec" placeholder="Secs" min="0" max="59" value="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ON Duration (Stay ON for):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r4DurMin" placeholder="Mins" min="0" value="20">
+            <input type="number" class="input-box" id="r4DurSec" placeholder="Secs" min="0" max="59" value="0">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="setTimer(4)">Start Countdown Timer</button>
+      </div>
+
+      <!-- Tab: Cyclic Automation -->
+      <div class="tab-pane" id="r4TabCycle">
+        <div class="form-group">
+          <label class="form-label">ON Time per Cycle (Secs/Mins):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r4CycOnMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r4CycOnSec" placeholder="Secs" min="1" value="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">OFF Time per Cycle (Secs/Mins):</label>
+          <div class="input-row">
+            <input type="number" class="input-box" id="r4CycOffMin" placeholder="Mins" min="0" value="0">
+            <input type="number" class="input-box" id="r4CycOffSec" placeholder="Secs" min="1" value="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Cycles (0 = Infinite Loop):</label>
+          <input type="number" class="input-box" id="r4CycTotal" placeholder="0 = Continuous Infinite Loop" min="0" value="0">
+        </div>
+        <button class="btn btn-primary" onclick="setCycle(4)">Start Cycle Automation</button>
+      </div>
+
+      <!-- Tab: Daily Schedule -->
+      <div class="tab-pane" id="r4TabSched">
+        <div class="form-group">
+          <label class="form-label">Daily Turn ON Time (HH:MM):</label>
+          <input type="time" class="input-box" id="r4SchedStart" value="18:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Daily Turn OFF Time (HH:MM):</label>
+          <input type="time" class="input-box" id="r4SchedEnd" value="22:00">
+        </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Active Weekdays:</label>
+            <div class="day-presets">
+              <button type="button" class="preset-btn" onclick="selectDayPreset(4, 'all')">All</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(4, 'weekdays')">Mon-Fri</button>
+              <button type="button" class="preset-btn" onclick="selectDayPreset(4, 'weekends')">Sat-Sun</button>
+            </div>
+          </div>
+          <div class="weekday-bar" id="r4WeekdayBar">
+            <div class="day-btn selected" data-day="0" onclick="toggleDay(4, 0)">Sun</div>
+            <div class="day-btn selected" data-day="1" onclick="toggleDay(4, 1)">Mon</div>
+            <div class="day-btn selected" data-day="2" onclick="toggleDay(4, 2)">Tue</div>
+            <div class="day-btn selected" data-day="3" onclick="toggleDay(4, 3)">Wed</div>
+            <div class="day-btn selected" data-day="4" onclick="toggleDay(4, 4)">Thu</div>
+            <div class="day-btn selected" data-day="5" onclick="toggleDay(4, 5)">Fri</div>
+            <div class="day-btn selected" data-day="6" onclick="toggleDay(4, 6)">Sat</div>
+          </div>
+        </div>
+        <div class="input-row" style="align-items:center; justify-content:space-between; margin-top:4px;">
+          <span style="font-size:12px; color:var(--text-sub); font-weight:600;">Enable Daily Schedule</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="r4SchedEn" onchange="setSchedule(4)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab: Stats -->
+      <div class="tab-pane" id="r4TabStats">
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="telem-title">Total ON Runtime</span>
+            <span class="stat-val" id="r4TotTime">0h 0m</span>
+          </div>
+          <div class="stat-item">
+            <span class="telem-title">Est. Energy Consumed</span>
+            <span class="stat-val" id="r4Energy">0.000 kWh</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Power Saver & RTOS Telemetry -->
     <div class="telemetry-card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -801,8 +1084,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         <div class="footer-brand">
           <span class="footer-icon">⚡</span>
           <div>
-            <div class="footer-title">ESP32 RTOS Control System</div>
-            <div class="footer-pins">Relay 1: <b>D2 (GPIO 2)</b> &bull; Relay 2: <b>D4 (GPIO 4)</b></div>
+            <div class="footer-title">ESP32 RTOS 4-Channel Control System</div>
+            <div class="footer-pins">Relay 1: <b>D5</b> &bull; Relay 2: <b>D18</b> &bull; Relay 3: <b>D19</b> &bull; Relay 4: <b>D21</b></div>
           </div>
         </div>
         <div class="footer-badges">
@@ -859,7 +1142,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
       <!-- Channel Customization & Power-On State -->
       <div class="form-group" style="border-top:1px solid var(--card-border); padding-top:12px;">
-        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 1 Customization</label>
+        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 1 Customization (D5)</label>
         <input type="text" class="input-box" id="cfgR1Name" placeholder="Relay 1 Name" value="Relay 1">
         <div class="input-row" style="margin-top:4px;">
           <input type="number" class="input-box" id="cfgR1Watts" placeholder="Load Watts (e.g. 100)" value="100">
@@ -878,7 +1161,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       </div>
 
       <div class="form-group" style="border-top:1px solid var(--card-border); padding-top:12px;">
-        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 2 Customization</label>
+        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 2 Customization (D18)</label>
         <input type="text" class="input-box" id="cfgR2Name" placeholder="Relay 2 Name" value="Relay 2">
         <div class="input-row" style="margin-top:4px;">
           <input type="number" class="input-box" id="cfgR2Watts" placeholder="Load Watts (e.g. 100)" value="100">
@@ -889,6 +1172,44 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         <div style="margin-top:6px;">
           <span class="form-label">Power-On Default State:</span>
           <select class="input-box" id="cfgR2PwrOn" style="width:100%; margin-top:2px;">
+            <option value="0">Always Boot OFF (Safest)</option>
+            <option value="1">Always Boot ON</option>
+            <option value="2">Restore Previous State before Power Cut</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="border-top:1px solid var(--card-border); padding-top:12px;">
+        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 3 Customization (D19)</label>
+        <input type="text" class="input-box" id="cfgR3Name" placeholder="Relay 3 Name" value="Relay 3">
+        <div class="input-row" style="margin-top:4px;">
+          <input type="number" class="input-box" id="cfgR3Watts" placeholder="Load Watts (e.g. 100)" value="100">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#fff;">
+            <input type="checkbox" id="cfgR3ActiveLow" checked> Active LOW
+          </label>
+        </div>
+        <div style="margin-top:6px;">
+          <span class="form-label">Power-On Default State:</span>
+          <select class="input-box" id="cfgR3PwrOn" style="width:100%; margin-top:2px;">
+            <option value="0">Always Boot OFF (Safest)</option>
+            <option value="1">Always Boot ON</option>
+            <option value="2">Restore Previous State before Power Cut</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="border-top:1px solid var(--card-border); padding-top:12px;">
+        <label class="form-label" style="font-weight:700; color:var(--text);">🏷️ Channel 4 Customization (D21)</label>
+        <input type="text" class="input-box" id="cfgR4Name" placeholder="Relay 4 Name" value="Relay 4">
+        <div class="input-row" style="margin-top:4px;">
+          <input type="number" class="input-box" id="cfgR4Watts" placeholder="Load Watts (e.g. 100)" value="100">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#fff;">
+            <input type="checkbox" id="cfgR4ActiveLow" checked> Active LOW
+          </label>
+        </div>
+        <div style="margin-top:6px;">
+          <span class="form-label">Power-On Default State:</span>
+          <select class="input-box" id="cfgR4PwrOn" style="width:100%; margin-top:2px;">
             <option value="0">Always Boot OFF (Safest)</option>
             <option value="1">Always Boot ON</option>
             <option value="2">Restore Previous State before Power Cut</option>
@@ -944,7 +1265,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
   <script>
     let isModalOpen = false;
-    const rDays = { 1: 0xFF, 2: 0xFF };
+    const rDays = { 1: 0xFF, 2: 0xFF, 3: 0xFF, 4: 0xFF };
 
     // Toast helper
     function showToast(msg) {
@@ -993,24 +1314,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         showToast('Error sending command');
       }
     }
-
-    /* Pulse Trigger - Commented out for now
-    async function triggerPulse(id, ms) {
-      try {
-        const res = await fetch('/api/pulse', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: `id=${id}&ms=${ms}`
-        });
-        if (res.ok) {
-          showToast(`Relay ${id} triggered with ${ms}ms Pulse!`);
-          fetchStatus();
-        }
-      } catch(err) {
-        showToast('Error triggering pulse');
-      }
-    }
-    */
 
     // Countdown Timer Start
     async function setTimer(id) {
@@ -1261,15 +1564,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       const sleepMin = parseInt(document.getElementById('lpSleepMin').value) || 5;
       const wakeMin = parseInt(document.getElementById('lpWakeMin').value) || 2;
 
-      const r1Name = document.getElementById('cfgR1Name').value;
-      const r1Watts = parseFloat(document.getElementById('cfgR1Watts').value) || 100;
-      const r1ActLow = document.getElementById('cfgR1ActiveLow').checked;
-      const r1PwrOn = parseInt(document.getElementById('cfgR1PwrOn').value) || 0;
-
-      const r2Name = document.getElementById('cfgR2Name').value;
-      const r2Watts = parseFloat(document.getElementById('cfgR2Watts').value) || 100;
-      const r2ActLow = document.getElementById('cfgR2ActiveLow').checked;
-      const r2PwrOn = parseInt(document.getElementById('cfgR2PwrOn').value) || 0;
+      let bodyParams = [];
+      for (let i = 1; i <= 4; i++) {
+        const name = document.getElementById(`cfgR${i}Name`).value;
+        const watts = parseFloat(document.getElementById(`cfgR${i}Watts`).value) || 100;
+        const actLow = document.getElementById(`cfgR${i}ActiveLow`).checked ? 1 : 0;
+        const pwrOn = parseInt(document.getElementById(`cfgR${i}PwrOn`).value) || 0;
+        bodyParams.push(`r${i}_name=${encodeURIComponent(name)}&r${i}_watts=${watts}&r${i}_actlow=${actLow}&r${i}_pwron=${pwrOn}`);
+      }
 
       try {
         await fetch('/api/power', {
@@ -1281,7 +1583,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         await fetch('/api/settings', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: `r1_name=${encodeURIComponent(r1Name)}&r1_watts=${r1Watts}&r1_actlow=${r1ActLow?1:0}&r1_pwron=${r1PwrOn}&r2_name=${encodeURIComponent(r2Name)}&r2_watts=${r2Watts}&r2_actlow=${r2ActLow?1:0}&r2_pwron=${r2PwrOn}`
+          body: bodyParams.join('&')
         });
 
         showToast('All Settings Permanently Saved!');
@@ -1295,7 +1597,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
     // Emergency Kill All
     async function killAllRelays() {
-      if (confirm('Are you sure you want to turn OFF all relays immediately?')) {
+      if (confirm('Are you sure you want to turn OFF all 4 relays immediately?')) {
         try {
           const res = await fetch('/api/all_off', { method: 'POST' });
           if (res.ok) {
@@ -1342,125 +1644,92 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           document.getElementById('stayOnStatusText').innerText = 'Power Saver mode enabled. AP will sleep after inactivity.';
         }
 
-        // Relay 1
-        const r1 = data.r1;
-        document.getElementById('r1Name').innerText = r1.name;
-        document.getElementById('r1Switch').checked = r1.state;
-        const card1 = document.getElementById('relayCard1');
-        const badge1 = document.getElementById('r1Badge');
-        if (r1.state) {
-          card1.classList.add('active');
-          badge1.className = 'relay-badge badge-on';
-          badge1.innerText = 'ON';
-        } else {
-          card1.classList.remove('active');
-          badge1.className = 'relay-badge badge-off';
-          badge1.innerText = 'OFF';
-        }
-        
-        // R1 Countdown Timer
-        const tBox1 = document.getElementById('r1TimerLiveBox');
-        if (r1.timer.active) {
-          tBox1.style.display = 'flex';
-          document.getElementById('r1TimerPhase').innerText = r1.timer.in_delay ? 'Delay Phase (Turn ON in):' : 'Active Phase (Turn OFF in):';
-          document.getElementById('r1TimerCountdown').innerText = formatSecs(r1.timer.remaining);
-          const totalSpan = r1.timer.in_delay ? r1.timer.delay_sec : r1.timer.dur_sec;
-          const pct = totalSpan > 0 ? ((totalSpan - r1.timer.remaining) / totalSpan) * 100 : 100;
-          document.getElementById('r1TimerProgress').style.width = pct + '%';
-        } else {
-          tBox1.style.display = 'none';
-        }
+        let totalSecs = 0;
+        let totalKwhAcc = 0;
+        let liveWatts = 0;
 
-        // R1 Cycle Automation
-        const cBox1 = document.getElementById('r1CycleLiveBox');
-        if (r1.cycle && r1.cycle.active) {
-          cBox1.style.display = 'flex';
-          const cycleLabel = r1.cycle.total_cycles > 0 ? `Cycle ${r1.cycle.current_cycle+1}/${r1.cycle.total_cycles}` : `Cycle #${r1.cycle.current_cycle+1} (Infinite)`;
-          document.getElementById('r1CyclePhase').innerText = `🔁 ${cycleLabel} [${r1.cycle.in_on ? 'ON Phase' : 'OFF Phase'}]`;
-          document.getElementById('r1CycleCountdown').innerText = formatSecs(r1.cycle.remaining);
-          const phaseSpan = r1.cycle.in_on ? r1.cycle.on_sec : r1.cycle.off_sec;
-          const pct = phaseSpan > 0 ? ((phaseSpan - r1.cycle.remaining) / phaseSpan) * 100 : 100;
-          document.getElementById('r1CycleProgress').style.width = pct + '%';
-        } else {
-          cBox1.style.display = 'none';
-        }
+        // Process all 4 channels dynamically
+        for (let i = 1; i <= 4; i++) {
+          const r = data[`r${i}`];
+          if (!r) continue;
 
-        // R1 Schedule & Stats
-        if (!isModalOpen) {
-          document.getElementById('r1SchedEn').checked = r1.schedule.enabled;
-          document.getElementById('r1SchedStart').value = `${String(r1.schedule.start_h).padStart(2,'0')}:${String(r1.schedule.start_m).padStart(2,'0')}`;
-          document.getElementById('r1SchedEnd').value = `${String(r1.schedule.end_h).padStart(2,'0')}:${String(r1.schedule.end_m).padStart(2,'0')}`;
-          if (r1.schedule.days !== undefined) {
-            rDays[1] = r1.schedule.days;
-            updateDayUi(1);
+          totalSecs += (r.total_sec || 0);
+          const rKwh = ((r.total_sec / 3600) * (r.watts / 1000));
+          totalKwhAcc += rKwh;
+          if (r.state) liveWatts += (r.watts || 100);
+
+          const rNameElem = document.getElementById(`r${i}Name`);
+          if (rNameElem) rNameElem.innerText = r.name;
+
+          const rSwElem = document.getElementById(`r${i}Switch`);
+          if (rSwElem) rSwElem.checked = r.state;
+
+          const card = document.getElementById(`relayCard${i}`);
+          const badge = document.getElementById(`r${i}Badge`);
+          if (card && badge) {
+            if (r.state) {
+              card.classList.add('active');
+              badge.className = 'relay-badge badge-on';
+              badge.innerText = 'ON';
+            } else {
+              card.classList.remove('active');
+              badge.className = 'relay-badge badge-off';
+              badge.innerText = 'OFF';
+            }
           }
-        }
-        document.getElementById('r1TotTime').innerText = formatHoursMin(r1.total_sec);
-        const kwh1 = ((r1.total_sec / 3600) * (r1.watts / 1000)).toFixed(3);
-        document.getElementById('r1Energy').innerText = `${kwh1} kWh`;
 
-        // Relay 2
-        const r2 = data.r2;
-        document.getElementById('r2Name').innerText = r2.name;
-        document.getElementById('r2Switch').checked = r2.state;
-        const card2 = document.getElementById('relayCard2');
-        const badge2 = document.getElementById('r2Badge');
-        if (r2.state) {
-          card2.classList.add('active');
-          badge2.className = 'relay-badge badge-on';
-          badge2.innerText = 'ON';
-        } else {
-          card2.classList.remove('active');
-          badge2.className = 'relay-badge badge-off';
-          badge2.innerText = 'OFF';
-        }
-
-        // R2 Countdown Timer
-        const tBox2 = document.getElementById('r2TimerLiveBox');
-        if (r2.timer.active) {
-          tBox2.style.display = 'flex';
-          document.getElementById('r2TimerPhase').innerText = r2.timer.in_delay ? 'Delay Phase (Turn ON in):' : 'Active Phase (Turn OFF in):';
-          document.getElementById('r2TimerCountdown').innerText = formatSecs(r2.timer.remaining);
-          const totalSpan = r2.timer.in_delay ? r2.timer.delay_sec : r2.timer.dur_sec;
-          const pct = totalSpan > 0 ? ((totalSpan - r2.timer.remaining) / totalSpan) * 100 : 100;
-          document.getElementById('r2TimerProgress').style.width = pct + '%';
-        } else {
-          tBox2.style.display = 'none';
-        }
-
-        // R2 Cycle Automation
-        const cBox2 = document.getElementById('r2CycleLiveBox');
-        if (r2.cycle && r2.cycle.active) {
-          cBox2.style.display = 'flex';
-          const cycleLabel = r2.cycle.total_cycles > 0 ? `Cycle ${r2.cycle.current_cycle+1}/${r2.cycle.total_cycles}` : `Cycle #${r2.cycle.current_cycle+1} (Infinite)`;
-          document.getElementById('r2CyclePhase').innerText = `🔁 ${cycleLabel} [${r2.cycle.in_on ? 'ON Phase' : 'OFF Phase'}]`;
-          document.getElementById('r2CycleCountdown').innerText = formatSecs(r2.cycle.remaining);
-          const phaseSpan = r2.cycle.in_on ? r2.cycle.on_sec : r2.cycle.off_sec;
-          const pct = phaseSpan > 0 ? ((phaseSpan - r2.cycle.remaining) / phaseSpan) * 100 : 100;
-          document.getElementById('r2CycleProgress').style.width = pct + '%';
-        } else {
-          cBox2.style.display = 'none';
-        }
-
-        // R2 Schedule & Stats
-        if (!isModalOpen) {
-          document.getElementById('r2SchedEn').checked = r2.schedule.enabled;
-          document.getElementById('r2SchedStart').value = `${String(r2.schedule.start_h).padStart(2,'0')}:${String(r2.schedule.start_m).padStart(2,'0')}`;
-          document.getElementById('r2SchedEnd').value = `${String(r2.schedule.end_h).padStart(2,'0')}:${String(r2.schedule.end_m).padStart(2,'0')}`;
-          if (r2.schedule.days !== undefined) {
-            rDays[2] = r2.schedule.days;
-            updateDayUi(2);
+          // Countdown Timer Info
+          const tBox = document.getElementById(`r${i}TimerLiveBox`);
+          if (tBox) {
+            if (r.timer && r.timer.active) {
+              tBox.style.display = 'flex';
+              document.getElementById(`r${i}TimerPhase`).innerText = r.timer.in_delay ? 'Delay Phase (Turn ON in):' : 'Active Phase (Turn OFF in):';
+              document.getElementById(`r${i}TimerCountdown`).innerText = formatSecs(r.timer.remaining);
+              const totalSpan = r.timer.in_delay ? r.timer.delay_sec : r.timer.dur_sec;
+              const pct = totalSpan > 0 ? ((totalSpan - r.timer.remaining) / totalSpan) * 100 : 100;
+              document.getElementById(`r${i}TimerProgress`).style.width = pct + '%';
+            } else {
+              tBox.style.display = 'none';
+            }
           }
-        }
-        document.getElementById('r2TotTime').innerText = formatHoursMin(r2.total_sec);
-        const kwh2 = ((r2.total_sec / 3600) * (r2.watts / 1000)).toFixed(3);
-        document.getElementById('r2Energy').innerText = `${kwh2} kWh`;
 
-        // Total Combined Energy Consumption Metrics
-        const totalSecs = r1.total_sec + r2.total_sec;
-        const totalKwh = (((r1.total_sec / 3600) * (r1.watts / 1000)) + ((r2.total_sec / 3600) * (r2.watts / 1000))).toFixed(3);
-        const liveWatts = (r1.state ? r1.ratedWatts || r1.watts : 0) + (r2.state ? r2.ratedWatts || r2.watts : 0);
-        document.getElementById('totalKwhBadge').innerText = `${totalKwh} kWh`;
+          // Cycle Automation Info
+          const cBox = document.getElementById(`r${i}CycleLiveBox`);
+          if (cBox) {
+            if (r.cycle && r.cycle.active) {
+              cBox.style.display = 'flex';
+              const cycleLabel = r.cycle.total_cycles > 0 ? `Cycle ${r.cycle.current_cycle+1}/${r.cycle.total_cycles}` : `Cycle #${r.cycle.current_cycle+1} (Infinite)`;
+              document.getElementById(`r${i}CyclePhase`).innerText = `🔁 ${cycleLabel} [${r.cycle.in_on ? 'ON Phase' : 'OFF Phase'}]`;
+              document.getElementById(`r${i}CycleCountdown`).innerText = formatSecs(r.cycle.remaining);
+              const phaseSpan = r.cycle.in_on ? r.cycle.on_sec : r.cycle.off_sec;
+              const pct = phaseSpan > 0 ? ((phaseSpan - r.cycle.remaining) / phaseSpan) * 100 : 100;
+              document.getElementById(`r${i}CycleProgress`).style.width = pct + '%';
+            } else {
+              cBox.style.display = 'none';
+            }
+          }
+
+          // Schedule & Stats
+          if (!isModalOpen) {
+            const sEn = document.getElementById(`r${i}SchedEn`);
+            if (sEn && r.schedule) {
+              sEn.checked = r.schedule.enabled;
+              document.getElementById(`r${i}SchedStart`).value = `${String(r.schedule.start_h).padStart(2,'0')}:${String(r.schedule.start_m).padStart(2,'0')}`;
+              document.getElementById(`r${i}SchedEnd`).value = `${String(r.schedule.end_h).padStart(2,'0')}:${String(r.schedule.end_m).padStart(2,'0')}`;
+              if (r.schedule.days !== undefined) {
+                rDays[i] = r.schedule.days;
+                updateDayUi(i);
+              }
+            }
+          }
+          const totTimeElem = document.getElementById(`r${i}TotTime`);
+          if (totTimeElem) totTimeElem.innerText = formatHoursMin(r.total_sec);
+          const nrgElem = document.getElementById(`r${i}Energy`);
+          if (nrgElem) nrgElem.innerText = `${rKwh.toFixed(3)} kWh`;
+        }
+
+        // Total Combined Energy Metrics
+        document.getElementById('totalKwhBadge').innerText = `${totalKwhAcc.toFixed(3)} kWh`;
         document.getElementById('totalRuntimeVal').innerText = formatHoursMin(totalSecs);
         document.getElementById('totalLiveWattsVal').innerText = `${liveWatts.toFixed(1)} W`;
 

@@ -9,15 +9,16 @@ RelayManager::RelayManager() :
     _processTicks(0) {
     _relayMutex = xSemaphoreCreateMutex();
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         _pulseActive[i] = false;
         _pulseEndTick[i] = 0;
     }
 
-    // Default Channel 1
+    // Default Channel 1 (D5 / GPIO 5)
     _channels[0].id = 1;
     _channels[0].pin = RELAY_1_PIN;
-    strncpy(_channels[0].name, "Relay 1 (D2)", sizeof(_channels[0].name) - 1);
+    strncpy(_channels[0].name, "Relay 1 (D5)", sizeof(_channels[0].name) - 1);
+    _channels[0].name[sizeof(_channels[0].name) - 1] = '\0';
     _channels[0].state = false;
     _channels[0].activeLow = true;   // Standard relay module active low
     _channels[0].ratedWatts = 100.0f; // 100W default load
@@ -28,10 +29,11 @@ RelayManager::RelayManager() :
     _channels[0].cycle = { false, 60, 60, 0, 0, 0, false };
     _channels[0].schedule = { false, 8, 0, 0, 18, 0, 0, 0xFF };
 
-    // Default Channel 2
+    // Default Channel 2 (D18 / GPIO 18)
     _channels[1].id = 2;
     _channels[1].pin = RELAY_2_PIN;
-    strncpy(_channels[1].name, "Relay 2 (D4)", sizeof(_channels[1].name) - 1);
+    strncpy(_channels[1].name, "Relay 2 (D18)", sizeof(_channels[1].name) - 1);
+    _channels[1].name[sizeof(_channels[1].name) - 1] = '\0';
     _channels[1].state = false;
     _channels[1].activeLow = true;
     _channels[1].ratedWatts = 100.0f;
@@ -41,6 +43,36 @@ RelayManager::RelayManager() :
     _channels[1].timer = { false, 0, 0, 0, 0, false, false };
     _channels[1].cycle = { false, 60, 60, 0, 0, 0, false };
     _channels[1].schedule = { false, 18, 0, 0, 22, 0, 0, 0xFF };
+
+    // Default Channel 3 (D19 / GPIO 19)
+    _channels[2].id = 3;
+    _channels[2].pin = RELAY_3_PIN;
+    strncpy(_channels[2].name, "Relay 3 (D19)", sizeof(_channels[2].name) - 1);
+    _channels[2].name[sizeof(_channels[2].name) - 1] = '\0';
+    _channels[2].state = false;
+    _channels[2].activeLow = true;
+    _channels[2].ratedWatts = 100.0f;
+    _channels[2].totalOnSeconds = 0;
+    _channels[2].sessionOnSeconds = 0;
+    _channels[2].powerOnState = POWERON_OFF;
+    _channels[2].timer = { false, 0, 0, 0, 0, false, false };
+    _channels[2].cycle = { false, 60, 60, 0, 0, 0, false };
+    _channels[2].schedule = { false, 8, 0, 0, 18, 0, 0, 0xFF };
+
+    // Default Channel 4 (D21 / GPIO 21)
+    _channels[3].id = 4;
+    _channels[3].pin = RELAY_4_PIN;
+    strncpy(_channels[3].name, "Relay 4 (D21)", sizeof(_channels[3].name) - 1);
+    _channels[3].name[sizeof(_channels[3].name) - 1] = '\0';
+    _channels[3].state = false;
+    _channels[3].activeLow = true;
+    _channels[3].ratedWatts = 100.0f;
+    _channels[3].totalOnSeconds = 0;
+    _channels[3].sessionOnSeconds = 0;
+    _channels[3].powerOnState = POWERON_OFF;
+    _channels[3].timer = { false, 0, 0, 0, 0, false, false };
+    _channels[3].cycle = { false, 60, 60, 0, 0, 0, false };
+    _channels[3].schedule = { false, 18, 0, 0, 22, 0, 0, 0xFF };
 }
 
 RelayManager::~RelayManager() {
@@ -55,16 +87,17 @@ RelayManager& RelayManager::getInstance() {
 }
 
 void RelayManager::begin() {
-    // Configure GPIOs
-    pinMode(_channels[0].pin, OUTPUT);
-    pinMode(_channels[1].pin, OUTPUT);
+    // Configure GPIOs for all channels
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
+        pinMode(_channels[i].pin, OUTPUT);
+    }
     pinMode(STATUS_LED_PIN, OUTPUT);
     digitalWrite(STATUS_LED_PIN, LOW);
 
     loadFromPreferences();
 
     // Set initial physical state based on Power-On preference
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         if (_channels[i].powerOnState == POWERON_ON) {
             _channels[i].state = true;
         } else if (_channels[i].powerOnState == POWERON_OFF) {
@@ -80,7 +113,8 @@ void RelayManager::begin() {
     _processTicks = 0;
 
     logEvent("System Booted & RTOS Initialized");
-    Serial.println("[RelayManager] Initialized with 2 channels on GPIO " + String(_channels[0].pin) + " and " + String(_channels[1].pin));
+    Serial.printf("[RelayManager] Initialized with 4 channels on GPIOs: D5(%d), D18(%d), D19(%d), D21(%d)\n", 
+                  _channels[0].pin, _channels[1].pin, _channels[2].pin, _channels[3].pin);
 }
 
 void RelayManager::logEvent(const char* msg) {
@@ -130,19 +164,19 @@ uint32_t RelayManager::getTickCount() {
 }
 
 void RelayManager::applyPhysicalPin(uint8_t channelId) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     uint8_t idx = channelId - 1;
     
     // Active LOW vs Active HIGH calculation
     uint8_t level = _channels[idx].activeLow ? (_channels[idx].state ? LOW : HIGH) : (_channels[idx].state ? HIGH : LOW);
     digitalWrite(_channels[idx].pin, level);
 
-    // Keep onboard status LED OFF as requested
+    // Keep onboard status LED OFF as default
     digitalWrite(STATUS_LED_PIN, LOW);
 }
 
 void RelayManager::setRelayState(uint8_t channelId, bool state) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         uint8_t idx = channelId - 1;
@@ -165,35 +199,13 @@ void RelayManager::setRelayState(uint8_t channelId, bool state) {
 }
 
 void RelayManager::toggleRelay(uint8_t channelId) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     setRelayState(channelId, !_channels[channelId - 1].state);
 }
 
-/* Commented out for now
-void RelayManager::triggerPulse(uint8_t channelId, uint32_t pulseDurationMs) {
-    if (channelId < 1 || channelId > 2) return;
-    if (pulseDurationMs < 100) pulseDurationMs = 100;
-    if (pulseDurationMs > 30000) pulseDurationMs = 30000;
-
-    if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
-        uint8_t idx = channelId - 1;
-        _channels[idx].state = true;
-        applyPhysicalPin(channelId);
-        _pulseActive[idx] = true;
-        _pulseEndTick[idx] = millis() + pulseDurationMs;
-
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%s Inching Pulse (%u ms)", _channels[idx].name, pulseDurationMs);
-        logEvent(buf);
-
-        xSemaphoreGive(_relayMutex);
-    }
-}
-*/
-
 void RelayManager::setAllOff() {
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
             _channels[i].state = false;
             _channels[i].timer.enabled = false;
             _channels[i].timer.isCountingDown = false;
@@ -210,7 +222,7 @@ void RelayManager::setAllOff() {
 
 RelayChannel RelayManager::getChannel(uint8_t channelId) {
     RelayChannel copy;
-    if (channelId < 1 || channelId > 2) return copy;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return copy;
     
     if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         copy = _channels[channelId - 1];
@@ -220,7 +232,7 @@ RelayChannel RelayManager::getChannel(uint8_t channelId) {
 }
 
 bool RelayManager::getRelayState(uint8_t channelId) {
-    if (channelId < 1 || channelId > 2) return false;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return false;
     bool state = false;
     if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         state = _channels[channelId - 1].state;
@@ -230,7 +242,7 @@ bool RelayManager::getRelayState(uint8_t channelId) {
 }
 
 void RelayManager::setCountdownTimer(uint8_t channelId, uint32_t startDelaySec, uint32_t durationSec, bool enable) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         uint8_t idx = channelId - 1;
@@ -274,7 +286,7 @@ void RelayManager::cancelCountdownTimer(uint8_t channelId) {
 }
 
 void RelayManager::setCycleAutomation(uint8_t channelId, uint32_t onSec, uint32_t offSec, uint32_t totalCycles, bool enable) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     if (onSec == 0) onSec = 10;
     if (offSec == 0) offSec = 10;
 
@@ -314,7 +326,7 @@ void RelayManager::cancelCycleAutomation(uint8_t channelId) {
 }
 
 void RelayManager::setSchedule(uint8_t channelId, uint8_t startH, uint8_t startM, uint8_t endH, uint8_t endM, uint8_t daysActive, bool enable) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         uint8_t idx = channelId - 1;
@@ -338,7 +350,7 @@ void RelayManager::setSchedule(uint8_t channelId, uint8_t startH, uint8_t startM
 }
 
 void RelayManager::cancelSchedule(uint8_t channelId) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         _channels[channelId - 1].schedule.enabled = false;
         saveToPreferences();
@@ -347,7 +359,7 @@ void RelayManager::cancelSchedule(uint8_t channelId) {
 }
 
 void RelayManager::updateChannelConfig(uint8_t channelId, const char* name, bool activeLow, float ratedWatts) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         uint8_t idx = channelId - 1;
@@ -365,7 +377,7 @@ void RelayManager::updateChannelConfig(uint8_t channelId, const char* name, bool
 }
 
 void RelayManager::setPowerOnBehavior(uint8_t channelId, uint8_t powerOnState) {
-    if (channelId < 1 || channelId > 2) return;
+    if (channelId < 1 || channelId > NUM_RELAY_CHANNELS) return;
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         _channels[channelId - 1].powerOnState = powerOnState;
         saveToPreferences();
@@ -376,23 +388,6 @@ void RelayManager::setPowerOnBehavior(uint8_t channelId, uint8_t powerOnState) {
 void RelayManager::processEngine() {
     _processTicks++;
     uint32_t now = millis();
-
-    // Check momentary inching pulse completion (Fast sub-millisecond check) - Commented out for now
-    /*
-    for (int i = 0; i < 2; i++) {
-        if (_pulseActive[i] && now >= _pulseEndTick[i]) {
-            if (xSemaphoreTake(_relayMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-                _pulseActive[i] = false;
-                _channels[i].state = false;
-                applyPhysicalPin(i + 1);
-                char buf[64];
-                snprintf(buf, sizeof(buf), "%s Inching Pulse Done -> OFF", _channels[i].name);
-                logEvent(buf);
-                xSemaphoreGive(_relayMutex);
-            }
-        }
-    }
-    */
 
     // 1-second interval execution for Timers, Cycles & Schedules
     if (now - _lastOneSecondTick >= 1000) {
@@ -415,7 +410,7 @@ void RelayManager::processEngine() {
 }
 
 void RelayManager::checkTimers() {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         if (_channels[i].timer.enabled && _channels[i].timer.isCountingDown) {
             if (_channels[i].timer.remainingSec > 0) {
                 _channels[i].timer.remainingSec--;
@@ -459,7 +454,7 @@ void RelayManager::checkTimers() {
 }
 
 void RelayManager::checkCycles() {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         if (_channels[i].cycle.enabled) {
             if (_channels[i].cycle.remainingSec > 0) {
                 _channels[i].cycle.remainingSec--;
@@ -517,7 +512,7 @@ void RelayManager::checkSchedules() {
     uint32_t currentSec = hour * 3600 + minute * 60 + second;
     uint8_t dayBit = (1 << dayOfWeek); // Sunday is bit 0, Monday bit 1...
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         // Countdown timer & Cycle loop have priority over schedule while active
         if ((_channels[i].timer.enabled && _channels[i].timer.isCountingDown) || _channels[i].cycle.enabled) {
             continue;
@@ -555,7 +550,7 @@ void RelayManager::checkSchedules() {
 }
 
 void RelayManager::updateRuntimeMetrics() {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
         if (_channels[i].state) {
             _channels[i].totalOnSeconds++;
             _channels[i].sessionOnSeconds++;
@@ -565,10 +560,11 @@ void RelayManager::updateRuntimeMetrics() {
 
 void RelayManager::loadFromPreferences() {
     if (_prefs.begin("relay_cfg", true)) { // Read-only mode
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
             String prefix = "r" + String(i + 1) + "_";
             String name = _prefs.getString((prefix + "name").c_str(), _channels[i].name);
             strncpy(_channels[i].name, name.c_str(), sizeof(_channels[i].name) - 1);
+            _channels[i].name[sizeof(_channels[i].name) - 1] = '\0';
             
             _channels[i].activeLow = _prefs.getBool((prefix + "actlow").c_str(), _channels[i].activeLow);
             _channels[i].ratedWatts = _prefs.getFloat((prefix + "watts").c_str(), _channels[i].ratedWatts);
@@ -593,7 +589,7 @@ void RelayManager::loadFromPreferences() {
 
 void RelayManager::saveToPreferences() {
     if (_prefs.begin("relay_cfg", false)) { // Read-Write mode
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
             String prefix = "r" + String(i + 1) + "_";
             _prefs.putString((prefix + "name").c_str(), _channels[i].name);
             _prefs.putBool((prefix + "actlow").c_str(), _channels[i].activeLow);
@@ -614,10 +610,11 @@ void RelayManager::saveToPreferences() {
 
 void RelayManager::saveRuntime() {
     if (_prefs.begin("relay_cfg", false)) {
-        _prefs.putUInt("r1_totsec", _channels[0].totalOnSeconds);
-        _prefs.putUInt("r2_totsec", _channels[1].totalOnSeconds);
-        _prefs.putBool("r1_last_st", _channels[0].state);
-        _prefs.putBool("r2_last_st", _channels[1].state);
+        for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
+            String prefix = "r" + String(i + 1) + "_";
+            _prefs.putUInt((prefix + "totsec").c_str(), _channels[i].totalOnSeconds);
+            _prefs.putBool((prefix + "last_st").c_str(), _channels[i].state);
+        }
         _prefs.end();
     }
 }

@@ -70,6 +70,8 @@ void handleStatus() {
 
     RelayChannel r1 = RelayManager::getInstance().getChannel(1);
     RelayChannel r2 = RelayManager::getInstance().getChannel(2);
+    RelayChannel r3 = RelayManager::getInstance().getChannel(3);
+    RelayChannel r4 = RelayManager::getInstance().getChannel(4);
     LowPowerConfig pwr = PowerManager::getInstance().getConfig();
 
     char timeBuf[16];
@@ -97,73 +99,46 @@ void handleStatus() {
     json += "\"synced\":" + String(TimeManager::getInstance().isTimeSynchronized() ? "true" : "false");
     json += "},";
 
-    // Relay 1 object
-    json += "\"r1\":{";
-    json += "\"name\":\"" + String(r1.name) + "\",";
-    json += "\"state\":" + String(r1.state ? "true" : "false") + ",";
-    json += "\"act_low\":" + String(r1.activeLow ? "true" : "false") + ",";
-    json += "\"watts\":" + String(r1.ratedWatts, 1) + ",";
-    json += "\"total_sec\":" + String(r1.totalOnSeconds) + ",";
-    json += "\"pwr_on\":" + String(r1.powerOnState) + ",";
-    json += "\"timer\":{";
-    json += "\"active\":" + String(r1.timer.isCountingDown ? "true" : "false") + ",";
-    json += "\"in_delay\":" + String(r1.timer.inDelayPhase ? "true" : "false") + ",";
-    json += "\"delay_sec\":" + String(r1.timer.startDelaySec) + ",";
-    json += "\"dur_sec\":" + String(r1.timer.durationSec) + ",";
-    json += "\"remaining\":" + String(r1.timer.remainingSec);
-    json += "},";
-    json += "\"cycle\":{";
-    json += "\"active\":" + String(r1.cycle.enabled ? "true" : "false") + ",";
-    json += "\"in_on\":" + String(r1.cycle.inOnPhase ? "true" : "false") + ",";
-    json += "\"on_sec\":" + String(r1.cycle.onSec) + ",";
-    json += "\"off_sec\":" + String(r1.cycle.offSec) + ",";
-    json += "\"total_cycles\":" + String(r1.cycle.totalCycles) + ",";
-    json += "\"current_cycle\":" + String(r1.cycle.currentCycle) + ",";
-    json += "\"remaining\":" + String(r1.cycle.remainingSec);
-    json += "},";
-    json += "\"schedule\":{";
-    json += "\"enabled\":" + String(r1.schedule.enabled ? "true" : "false") + ",";
-    json += "\"start_h\":" + String(r1.schedule.startHour) + ",";
-    json += "\"start_m\":" + String(r1.schedule.startMinute) + ",";
-    json += "\"end_h\":" + String(r1.schedule.endHour) + ",";
-    json += "\"end_m\":" + String(r1.schedule.endMinute) + ",";
-    json += "\"days\":" + String(r1.schedule.daysActive);
-    json += "}";
-    json += "},";
+    // Helper lambda to append relay JSON
+    auto appendRelayJson = [](String& outJson, const char* key, const RelayChannel& r) {
+        outJson += "\"" + String(key) + "\":{";
+        outJson += "\"name\":\"" + String(r.name) + "\",";
+        outJson += "\"state\":" + String(r.state ? "true" : "false") + ",";
+        outJson += "\"act_low\":" + String(r.activeLow ? "true" : "false") + ",";
+        outJson += "\"watts\":" + String(r.ratedWatts, 1) + ",";
+        outJson += "\"total_sec\":" + String(r.totalOnSeconds) + ",";
+        outJson += "\"pwr_on\":" + String(r.powerOnState) + ",";
+        outJson += "\"timer\":{";
+        outJson += "\"active\":" + String(r.timer.isCountingDown ? "true" : "false") + ",";
+        outJson += "\"in_delay\":" + String(r.timer.inDelayPhase ? "true" : "false") + ",";
+        outJson += "\"delay_sec\":" + String(r.timer.startDelaySec) + ",";
+        outJson += "\"dur_sec\":" + String(r.timer.durationSec) + ",";
+        outJson += "\"remaining\":" + String(r.timer.remainingSec);
+        outJson += "},";
+        outJson += "\"cycle\":{";
+        outJson += "\"active\":" + String(r.cycle.enabled ? "true" : "false") + ",";
+        outJson += "\"in_on\":" + String(r.cycle.inOnPhase ? "true" : "false") + ",";
+        outJson += "\"on_sec\":" + String(r.cycle.onSec) + ",";
+        outJson += "\"off_sec\":" + String(r.cycle.offSec) + ",";
+        outJson += "\"total_cycles\":" + String(r.cycle.totalCycles) + ",";
+        outJson += "\"current_cycle\":" + String(r.cycle.currentCycle) + ",";
+        outJson += "\"remaining\":" + String(r.cycle.remainingSec);
+        outJson += "},";
+        outJson += "\"schedule\":{";
+        outJson += "\"enabled\":" + String(r.schedule.enabled ? "true" : "false") + ",";
+        outJson += "\"start_h\":" + String(r.schedule.startHour) + ",";
+        outJson += "\"start_m\":" + String(r.schedule.startMinute) + ",";
+        outJson += "\"end_h\":" + String(r.schedule.endHour) + ",";
+        outJson += "\"end_m\":" + String(r.schedule.endMinute) + ",";
+        outJson += "\"days\":" + String(r.schedule.daysActive);
+        outJson += "}";
+        outJson += "},";
+    };
 
-    // Relay 2 object
-    json += "\"r2\":{";
-    json += "\"name\":\"" + String(r2.name) + "\",";
-    json += "\"state\":" + String(r2.state ? "true" : "false") + ",";
-    json += "\"act_low\":" + String(r2.activeLow ? "true" : "false") + ",";
-    json += "\"watts\":" + String(r2.ratedWatts, 1) + ",";
-    json += "\"total_sec\":" + String(r2.totalOnSeconds) + ",";
-    json += "\"pwr_on\":" + String(r2.powerOnState) + ",";
-    json += "\"timer\":{";
-    json += "\"active\":" + String(r2.timer.isCountingDown ? "true" : "false") + ",";
-    json += "\"in_delay\":" + String(r2.timer.inDelayPhase ? "true" : "false") + ",";
-    json += "\"delay_sec\":" + String(r2.timer.startDelaySec) + ",";
-    json += "\"dur_sec\":" + String(r2.timer.durationSec) + ",";
-    json += "\"remaining\":" + String(r2.timer.remainingSec);
-    json += "},";
-    json += "\"cycle\":{";
-    json += "\"active\":" + String(r2.cycle.enabled ? "true" : "false") + ",";
-    json += "\"in_on\":" + String(r2.cycle.inOnPhase ? "true" : "false") + ",";
-    json += "\"on_sec\":" + String(r2.cycle.onSec) + ",";
-    json += "\"off_sec\":" + String(r2.cycle.offSec) + ",";
-    json += "\"total_cycles\":" + String(r2.cycle.totalCycles) + ",";
-    json += "\"current_cycle\":" + String(r2.cycle.currentCycle) + ",";
-    json += "\"remaining\":" + String(r2.cycle.remainingSec);
-    json += "},";
-    json += "\"schedule\":{";
-    json += "\"enabled\":" + String(r2.schedule.enabled ? "true" : "false") + ",";
-    json += "\"start_h\":" + String(r2.schedule.startHour) + ",";
-    json += "\"start_m\":" + String(r2.schedule.startMinute) + ",";
-    json += "\"end_h\":" + String(r2.schedule.endHour) + ",";
-    json += "\"end_m\":" + String(r2.schedule.endMinute) + ",";
-    json += "\"days\":" + String(r2.schedule.daysActive);
-    json += "}";
-    json += "},";
+    appendRelayJson(json, "r1", r1);
+    appendRelayJson(json, "r2", r2);
+    appendRelayJson(json, "r3", r3);
+    appendRelayJson(json, "r4", r4);
 
     // Power saver object
     json += "\"power\":{";
@@ -353,26 +328,18 @@ void handleSettingsUpdate() {
     PowerManager::getInstance().registerUserActivity();
     server.sendHeader("Access-Control-Allow-Origin", "*");
 
-    if (server.hasArg("r1_name")) {
-        String r1Name = server.arg("r1_name");
-        float r1Watts = server.arg("r1_watts").toFloat();
-        bool r1ActLow = (server.arg("r1_actlow").toInt() == 1);
-        RelayManager::getInstance().updateChannelConfig(1, r1Name.c_str(), r1ActLow, r1Watts);
-    }
-    if (server.hasArg("r1_pwron")) {
-        uint8_t pwrOn = server.arg("r1_pwron").toInt();
-        RelayManager::getInstance().setPowerOnBehavior(1, pwrOn);
-    }
-
-    if (server.hasArg("r2_name")) {
-        String r2Name = server.arg("r2_name");
-        float r2Watts = server.arg("r2_watts").toFloat();
-        bool r2ActLow = (server.arg("r2_actlow").toInt() == 1);
-        RelayManager::getInstance().updateChannelConfig(2, r2Name.c_str(), r2ActLow, r2Watts);
-    }
-    if (server.hasArg("r2_pwron")) {
-        uint8_t pwrOn = server.arg("r2_pwron").toInt();
-        RelayManager::getInstance().setPowerOnBehavior(2, pwrOn);
+    for (int ch = 1; ch <= NUM_RELAY_CHANNELS; ch++) {
+        String prefix = "r" + String(ch) + "_";
+        if (server.hasArg(prefix + "name")) {
+            String name = server.arg(prefix + "name");
+            float watts = server.hasArg(prefix + "watts") ? server.arg(prefix + "watts").toFloat() : 100.0f;
+            bool actLow = server.hasArg(prefix + "actlow") ? (server.arg(prefix + "actlow").toInt() == 1) : true;
+            RelayManager::getInstance().updateChannelConfig(ch, name.c_str(), actLow, watts);
+        }
+        if (server.hasArg(prefix + "pwron")) {
+            uint8_t pwrOn = server.arg(prefix + "pwron").toInt();
+            RelayManager::getInstance().setPowerOnBehavior(ch, pwrOn);
+        }
     }
 
     server.send(200, "text/plain", "Settings Saved");

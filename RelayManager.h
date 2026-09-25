@@ -66,13 +66,13 @@ private:
     void checkSchedules();
     void updateRuntimeMetrics();
 
-    RelayChannel _channels[2];
+    RelayChannel _channels[NUM_RELAY_CHANNELS];
     SemaphoreHandle_t _relayMutex;
     Preferences _prefs;
 
     // Pulse state helper
-    uint32_t _pulseEndTick[2];
-    bool _pulseActive[2];
+    uint32_t _pulseEndTick[NUM_RELAY_CHANNELS];
+    bool _pulseActive[NUM_RELAY_CHANNELS];
 
     // Event Log Ring Buffer
     EventLogEntry _logs[MAX_EVENT_LOGS];
