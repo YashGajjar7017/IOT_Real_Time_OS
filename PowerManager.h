@@ -53,6 +53,7 @@ private:
     uint32_t _lastActivityTick;
     uint32_t _stateChangeTick;
     uint32_t _processTicks;
+    float _ledPhase;
     int16_t _ledBrightness;
     int8_t _ledDirection;
 };

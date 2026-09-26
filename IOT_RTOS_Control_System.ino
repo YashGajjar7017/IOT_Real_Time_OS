@@ -319,22 +319,19 @@ void handlePowerConfig() {
     PowerManager::getInstance().registerUserActivity();
     server.sendHeader("Access-Control-Allow-Origin", "*");
 
-    if (server.hasArg("stay_on")) {
-        bool stayOn = (server.arg("stay_on").toInt() == 1);
-        PowerManager::getInstance().setPermanentStayOn(stayOn);
-        server.send(200, "text/plain", "Permanent Stay-On Config Updated");
-        return;
-    }
+    uint32_t sleepMin = server.hasArg("sleep_min") ? server.arg("sleep_min").toInt() : 5;
+    uint32_t wakeMin = server.hasArg("wake_min") ? server.arg("wake_min").toInt() : 2;
 
     if (server.hasArg("enable")) {
         bool en = (server.arg("enable").toInt() == 1);
-        uint32_t sleepMin = server.hasArg("sleep_min") ? server.arg("sleep_min").toInt() : 5;
-        uint32_t wakeMin = server.hasArg("wake_min") ? server.arg("wake_min").toInt() : 2;
-
         PowerManager::getInstance().setLowPowerMode(en, sleepMin, wakeMin);
         server.send(200, "text/plain", "Power Config Updated");
+    } else if (server.hasArg("stay_on")) {
+        bool stayOn = (server.arg("stay_on").toInt() == 1);
+        PowerManager::getInstance().setLowPowerMode(!stayOn, sleepMin, wakeMin);
+        server.send(200, "text/plain", "Power Config Updated");
     } else {
-        server.send(400, "text/plain", "Missing enable/stay_on parameter");
+        server.send(400, "text/plain", "Missing enable or stay_on parameter");
     }
 }
 

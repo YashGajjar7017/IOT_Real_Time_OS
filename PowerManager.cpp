@@ -1,9 +1,11 @@
 #include "PowerManager.h"
+#include <math.h>
 
 PowerManager::PowerManager() : 
     _lastActivityTick(0), 
     _stateChangeTick(0), 
     _processTicks(0),
+    _ledPhase(0.0f),
     _ledBrightness(0),
     _ledDirection(4) {
     _powerMutex = xSemaphoreCreateMutex();
@@ -47,6 +49,7 @@ void PowerManager::begin(const char* apSsid, const char* apPass) {
     _lastActivityTick = millis();
     _stateChangeTick = millis();
     _processTicks = 0;
+    _ledPhase = 0.0f;
     _ledBrightness = 0;
     _ledDirection = 4;
 }
@@ -54,22 +57,22 @@ void PowerManager::begin(const char* apSsid, const char* apPass) {
 void PowerManager::setLowPowerMode(bool enable, uint32_t sleepMin, uint32_t wakeMin) {
     if (xSemaphoreTake(_powerMutex, portMAX_DELAY) == pdTRUE) {
         _config.enabled = enable;
-        if (enable) {
-            _config.permanentStayOn = false; // Enabling low power turns off permanent stay on
-        }
+        _config.permanentStayOn = !enable; // Toggling low power mode explicitly updates permanent stay on
+
         if (sleepMin >= 1) _config.sleepIntervalMin = sleepMin;
         if (wakeMin >= 1) _config.wakeWindowMin = wakeMin;
 
         if (!enable && _config.isApSleeping) {
             wakeUpAP();
+        } else if (enable) {
+            _lastActivityTick = millis();
+            _stateChangeTick = millis();
         }
 
-        _lastActivityTick = millis();
-        _stateChangeTick = millis();
         saveToPreferences();
         
-        Serial.printf("[PowerManager] Low Power Mode: %s (Sleep: %u min, Wake: %u min)\n", 
-                      enable ? "ENABLED" : "DISABLED", _config.sleepIntervalMin, _config.wakeWindowMin);
+        Serial.printf("[PowerManager] Low Power Mode: %s (Sleep: %u min, Wake: %u min, PermanentStayOn: %d)\n", 
+                      enable ? "ENABLED" : "DISABLED", _config.sleepIntervalMin, _config.wakeWindowMin, _config.permanentStayOn);
         xSemaphoreGive(_powerMutex);
     }
 }
@@ -77,17 +80,19 @@ void PowerManager::setLowPowerMode(bool enable, uint32_t sleepMin, uint32_t wake
 void PowerManager::setPermanentStayOn(bool permanentStayOn) {
     if (xSemaphoreTake(_powerMutex, portMAX_DELAY) == pdTRUE) {
         _config.permanentStayOn = permanentStayOn;
-        if (permanentStayOn) {
-            _config.enabled = false; // Disable sleep duty cycling
-            if (_config.isApSleeping) {
-                wakeUpAP();
-            }
+        _config.enabled = !permanentStayOn; // When stay-on is disabled, low power mode is ENABLED
+
+        if (permanentStayOn && _config.isApSleeping) {
+            wakeUpAP();
+        } else if (!permanentStayOn) {
+            _lastActivityTick = millis();
+            _stateChangeTick = millis();
         }
-        _lastActivityTick = millis();
-        _stateChangeTick = millis();
         saveToPreferences();
 
-        Serial.printf("[PowerManager] Permanent Stay-On Mode: %s\n", permanentStayOn ? "ENABLED (Sleep Disabled)" : "DISABLED");
+        Serial.printf("[PowerManager] Permanent Stay-On Mode: %s (Low Power Mode: %s)\n", 
+                      permanentStayOn ? "ENABLED (Sleep Disabled)" : "DISABLED (Auto-Sleep Enabled)",
+                      _config.enabled ? "ENABLED" : "DISABLED");
         xSemaphoreGive(_powerMutex);
     }
 }
@@ -163,17 +168,27 @@ uint32_t PowerManager::getTickCount() {
 
 void PowerManager::updateSleepLed() {
     if (_config.isApSleeping) {
-        // Smooth breathing / fading blue light effect in sleep mode (high & low)
-        _ledBrightness += _ledDirection;
-        if (_ledBrightness >= 250) {
-            _ledBrightness = 250;
-            _ledDirection = -5;
-        } else if (_ledBrightness <= 2) {
-            _ledBrightness = 2;
-            _ledDirection = 5;
+        // Silky smooth sinusoidal breathing / fading blue light effect in sleep mode (smooth high to low to high)
+        _ledPhase += 0.052f; // ~120 steps across 25ms ticks -> ~3.0s smooth breathing cycle
+        if (_ledPhase >= 2.0f * (float)PI) {
+            _ledPhase -= 2.0f * (float)PI;
         }
+
+        // Sine wave mapped 0.0 to 1.0
+        float sineVal = (sinf(_ledPhase) + 1.0f) * 0.5f;
+
+        // Quadratic gamma perception curve (smooth gradual transition near dark and bright)
+        float gammaVal = sineVal * sineVal;
+
+        // Brightness smoothly transitions between gentle low (2) and bright high (255)
+        _ledBrightness = (int16_t)(gammaVal * 253.0f + 2.0f);
+        if (_ledBrightness > 255) _ledBrightness = 255;
+        if (_ledBrightness < 0) _ledBrightness = 0;
+
         analogWrite(STATUS_LED_PIN, (uint8_t)_ledBrightness);
     } else {
+        _ledPhase = 0.0f;
+        _ledBrightness = 0;
         analogWrite(STATUS_LED_PIN, 0);
         digitalWrite(STATUS_LED_PIN, LOW);
     }
@@ -195,6 +210,8 @@ void PowerManager::wakeUpAP() {
     _stateChangeTick = millis();
     
     // Turn OFF sleep breathing LED when awake
+    _ledPhase = 0.0f;
+    _ledBrightness = 0;
     analogWrite(STATUS_LED_PIN, 0);
     digitalWrite(STATUS_LED_PIN, LOW);
     
@@ -211,8 +228,8 @@ void PowerManager::putAPToSleep() {
 
     _config.isApSleeping = true;
     _stateChangeTick = millis();
+    _ledPhase = 0.0f;
     _ledBrightness = 0;
-    _ledDirection = 5;
     Serial.printf("[PowerManager] Wi-Fi AP sleeping. Blue LED breathing smoothly. Next wake in %u minutes.\n", _config.sleepIntervalMin);
 }
 
@@ -233,7 +250,7 @@ void PowerManager::processEngine() {
                 // Check inactivity timeout
                 uint32_t activeTimeoutMs = _config.wakeWindowMin * 60 * 1000;
                 if (now - _lastActivityTick >= activeTimeoutMs) {
-                    // Inactivity timeout expired -> Enter sleep mode with breathing LED
+                    // Inactivity timeout expired -> Enter sleep mode with smooth breathing LED
                     putAPToSleep();
                 }
             } else {
@@ -252,11 +269,20 @@ void PowerManager::processEngine() {
 void PowerManager::loadFromPreferences() {
     if (_prefs.begin("pwr_cfg", true)) {
         _config.permanentStayOn = _prefs.getBool("lp_stay_on", true); // Default: Stay on permanently
-        _config.enabled = _prefs.getBool("lp_en", false);
+        _config.enabled = _prefs.getBool("lp_en", !_config.permanentStayOn);
+        // Ensure consistency between permanentStayOn and enabled
+        if (_config.permanentStayOn) {
+            _config.enabled = false;
+        } else {
+            _config.enabled = true;
+        }
         _config.sleepIntervalMin = _prefs.getUInt("lp_sleep", 5);
         _config.wakeWindowMin = _prefs.getUInt("lp_wake", 2);
+        if (_config.sleepIntervalMin < 1) _config.sleepIntervalMin = 5;
+        if (_config.wakeWindowMin < 1) _config.wakeWindowMin = 2;
         _prefs.end();
-        Serial.printf("[PowerManager] Preferences loaded: PermanentStayOn=%d, LowPowerEn=%d\n", _config.permanentStayOn, _config.enabled);
+        Serial.printf("[PowerManager] Preferences loaded: PermanentStayOn=%d, LowPowerEn=%d, Sleep=%u min, Wake=%u min\n", 
+                      _config.permanentStayOn, _config.enabled, _config.sleepIntervalMin, _config.wakeWindowMin);
     }
 }
 
@@ -267,6 +293,7 @@ void PowerManager::saveToPreferences() {
         _prefs.putUInt("lp_sleep", _config.sleepIntervalMin);
         _prefs.putUInt("lp_wake", _config.wakeWindowMin);
         _prefs.end();
-        Serial.println("[PowerManager] Preferences saved permanently.");
+        Serial.printf("[PowerManager] Preferences saved: PermanentStayOn=%d, LowPowerEn=%d, Sleep=%u min, Wake=%u min\n",
+                      _config.permanentStayOn, _config.enabled, _config.sleepIntervalMin, _config.wakeWindowMin);
     }
 }

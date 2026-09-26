@@ -14,10 +14,10 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
   <title>ESP32 OTA Firmware Flashing Station (Port 500)</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(0, 229, 255, 0.12) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.10) 0%, transparent 50%);
-      --card-bg: rgba(30, 41, 59, 0.90);
-      --card-inner-bg: #131b2a;
+      --bg: #131722;
+      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(148, 163, 184, 0.09) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(71, 85, 105, 0.08) 0%, transparent 50%);
+      --card-bg: rgba(28, 35, 51, 0.92);
+      --card-inner-bg: #161c2b;
       --card-border: rgba(255, 255, 255, 0.15);
       --primary: #00e5ff;
       --primary-glow: rgba(0, 229, 255, 0.4);
@@ -25,10 +25,10 @@ const char OTA_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       --success-glow: rgba(0, 230, 118, 0.4);
       --danger: #ff3366;
       --warning: #ffb703;
-      --text: #ffffff;
+      --text: #f8fafc;
       --text-sub: #cbd5e1;
       --text-muted: #94a3b8;
-      --input-bg: #1e293b;
+      --input-bg: #0f1420;
       --card-radius: 16px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -227,11 +227,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
   <title>ESP32 Real-Time Quad Relay & Telegram Control System</title>
   <style>
     :root {
-      --bg: #0b0f19;
-      --bg-gradient: radial-gradient(circle at 10% 15%, rgba(0, 229, 255, 0.10) 0%, transparent 40%), radial-gradient(circle at 90% 85%, rgba(0, 230, 118, 0.08) 0%, transparent 45%);
-      --card-bg: rgba(22, 30, 46, 0.82);
-      --card-inner-bg: #111827;
-      --card-border: rgba(255, 255, 255, 0.12);
+      --bg: #131722;
+      --bg-gradient: radial-gradient(circle at 15% 15%, rgba(148, 163, 184, 0.08) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(71, 85, 105, 0.08) 0%, transparent 45%);
+      --card-bg: rgba(28, 35, 51, 0.90);
+      --card-inner-bg: #161c2c;
+      --card-border: rgba(255, 255, 255, 0.14);
       --primary: #00e5ff;
       --primary-glow: rgba(0, 229, 255, 0.45);
       --success: #00e676;
@@ -241,10 +241,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       --warning: #ffb703;
       --tg-color: #29b6f6;
       --tg-glow: rgba(41, 182, 246, 0.45);
-      --text: #ffffff;
+      --text: #f8fafc;
       --text-sub: #cbd5e1;
       --text-muted: #94a3b8;
-      --input-bg: #0d1320;
+      --input-bg: #0f1420;
       --card-radius: 18px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -268,15 +268,32 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .btn-icon { background: rgba(255,255,255,0.08); border: 1px solid var(--card-border); color: #fff; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; }
     .btn-icon:active { transform: scale(0.92); }
 
+    /* Section Divider Banners (Distinguish Frontend vs Backend) */
+    .section-banner { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 12px; margin-top: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+    .section-banner-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .section-badge { font-family: monospace; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.4px; }
+    .section-banner-text { font-size: 11px; color: var(--text-sub); font-weight: 600; }
+    .section-pill { font-family: monospace; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    
+    .frontend-banner { background: linear-gradient(90deg, rgba(0, 229, 255, 0.12), rgba(0, 230, 118, 0.08)); border: 1px solid rgba(0, 229, 255, 0.35); }
+    .frontend-badge { background: rgba(0, 229, 255, 0.22); border: 1px solid var(--primary); color: var(--primary); }
+    .frontend-pill { background: rgba(0, 230, 118, 0.15); border: 1px solid var(--success); color: var(--success); }
+
+    .backend-banner { background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.10)); border: 1px solid rgba(168, 85, 247, 0.4); margin-top: 10px; }
+    .backend-badge { background: rgba(168, 85, 247, 0.25); border: 1px solid #c084fc; color: #e9d5ff; }
+    .backend-pill { background: rgba(168, 85, 247, 0.15); border: 1px solid #a855f7; color: #d8b4fe; }
+
+    .nav-section-title { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px 2px; }
+
     /* Sidenav Drawer */
     .sidenav-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
     .sidenav-overlay.open { opacity: 1; pointer-events: auto; }
-    .sidenav { position: fixed; top: 0; left: -320px; width: 300px; height: 100vh; background: #101626; border-right: 1px solid var(--card-border); z-index: 201; padding: 22px 18px; display: flex; flex-direction: column; justify-content: space-between; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 10px 0 35px rgba(0,0,0,0.6); overflow-y: auto; }
+    .sidenav { position: fixed; top: 0; left: -320px; width: 300px; height: 100vh; background: #151b29; border-right: 1px solid var(--card-border); z-index: 201; padding: 22px 18px; display: flex; flex-direction: column; justify-content: space-between; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 10px 0 35px rgba(0,0,0,0.6); overflow-y: auto; }
     .sidenav.open { left: 0; }
     .sidenav-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 16px; margin-bottom: 16px; }
     .sidenav-brand { display: flex; align-items: center; gap: 10px; }
-    .sidenav-nav { display: flex; flex-direction: column; gap: 8px; }
-    .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; color: var(--text-sub); text-decoration: none; font-size: 13px; font-weight: 700; transition: all 0.2s; background: transparent; border: 1px solid transparent; }
+    .sidenav-nav { display: flex; flex-direction: column; gap: 6px; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; color: var(--text-sub); text-decoration: none; font-size: 13px; font-weight: 700; transition: all 0.2s; background: transparent; border: 1px solid transparent; }
     .nav-link:hover, .nav-link:active { background: rgba(0, 229, 255, 0.1); color: var(--primary); border-color: rgba(0, 229, 255, 0.3); }
     .sidenav-footer { background: var(--card-inner-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: var(--text-muted); }
 
@@ -403,7 +420,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .telem-val { font-size: 13px; font-weight: 800; color: #fff; font-family: monospace; }
 
     /* Event Logs */
-    .event-log-box { background: #080c14; border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 12px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .event-log-box { background: #0d121c; border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 12px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
     .event-entry { display: flex; gap: 8px; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
     .event-time { color: var(--primary); font-weight: 700; min-width: 70px; }
 
@@ -411,9 +428,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     .master-emergency-btn:active { transform: scale(0.97); }
 
     /* Modals */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 13, 20, 0.82); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
     .modal-overlay.open { display: flex; }
-    .modal { background: #131928; border: 1px solid var(--card-border); border-radius: var(--card-radius); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 45px rgba(0,0,0,0.7); }
+    .modal { background: #171e2e; border: 1px solid var(--card-border); border-radius: var(--card-radius); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 45px rgba(0,0,0,0.7); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px; }
     .modal-title { font-size: 16px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
     .close-btn { background: transparent; border: none; color: var(--text-sub); font-size: 22px; cursor: pointer; }
@@ -446,13 +463,17 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       </div>
 
       <nav class="sidenav-nav">
-        <a href="#relaysSection" class="nav-link" onclick="toggleSidenav(false)">⚡ Dashboard & Relays</a>
-        <a href="#shortcutsSection" class="nav-link" onclick="toggleSidenav(false)">🚀 Quick Shortcuts</a>
+        <div class="nav-section-title">🎛️ FRONTEND CONTROLS</div>
+        <a href="#frontendSection" class="nav-link" onclick="toggleSidenav(false)">⚡ Relay Control & Timers</a>
+        <a href="#shortcutsSection" class="nav-link" onclick="toggleSidenav(false)">🚀 Quick 1-Tap Shortcuts</a>
+        <a href="#energySection" class="nav-link" onclick="toggleSidenav(false)">📊 Energy & Power Consumption</a>
+
+        <div class="nav-section-title">⚙️ BACKEND & SERVICES</div>
+        <a href="#powerSection" class="nav-link" onclick="toggleSidenav(false)">🔋 Power & Auto-Sleep Manager</a>
+        <a href="#telemetrySection" class="nav-link" onclick="toggleSidenav(false)">📊 FreeRTOS System Telemetry</a>
         <a href="javascript:void(0)" class="nav-link" onclick="openTelegramModal(); toggleSidenav(false);">✈️ Telegram Bot Hub</a>
-        <a href="#powerSection" class="nav-link" onclick="toggleSidenav(false)">🔋 Power & Auto-Sleep</a>
-        <a href="#energySection" class="nav-link" onclick="toggleSidenav(false)">📊 Energy & Diagnostics</a>
         <a href="javascript:void(0)" class="nav-link" onclick="openSettingsModal(); toggleSidenav(false);">⚙️ System Settings & OTA</a>
-        <a href="http://192.168.4.1:500" target="_blank" class="nav-link">🚀 Port 500 OTA Flasher</a>
+        <a href="http://192.168.4.1:500" target="_blank" class="nav-link">🚀 Port 500 Dedicated Flasher</a>
       </nav>
     </div>
 
@@ -496,6 +517,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       <button class="sync-btn" onclick="syncPhoneTime()">📱 Sync Time</button>
     </div>
 
+    <!-- FRONTEND CONTROLS & DASHBOARD BANNER -->
+    <div class="section-banner frontend-banner" id="frontendSection">
+      <div class="section-banner-left">
+        <span class="section-badge frontend-badge">🎛️ FRONTEND DASHBOARD</span>
+        <span class="section-banner-text">Relay Switching, Timers, Cycles & Daily Schedules</span>
+      </div>
+      <span class="section-pill frontend-pill">4 Channels</span>
+    </div>
+
     <!-- Quick Relay Shortcuts Bar (Screen Shortcut) -->
     <div class="shortcuts-card" id="shortcutsSection">
       <div class="shortcuts-header">
@@ -525,39 +555,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <span class="sc-icon">⚡</span>
           <span class="sc-name" id="scR4Name">Relay 4</span>
           <span class="sc-badge off" id="scR4Badge">OFF</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auto-Sleep Countdown & Power Saver Card -->
-    <div class="sleep-countdown-card" id="powerSection">
-      <div class="sleep-left">
-        <div class="sleep-title">
-          <span>🔋 Auto-Sleep Power Saver</span>
-          <span class="sleep-countdown-val" id="sleepCountdownText">--:--</span>
-        </div>
-        <span class="sleep-sub" id="sleepStatusSub">Auto-sleep countdown active. Inactivity will shut off Wi-Fi AP.</span>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="permanentStayOnSwitch" onchange="togglePermanentStayOn(this.checked)">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <!-- Total Energy Consumption Card -->
-    <div class="energy-total-card" id="energySection">
-      <div class="energy-total-header">
-        <span class="energy-title">⚡ Total Energy Consumed</span>
-        <span class="energy-val-badge" id="totalKwhBadge">0.000 kWh</span>
-      </div>
-      <div class="energy-subgrid">
-        <div class="energy-subitem">
-          <span class="energy-subtitle">Total Runtime (All 4 Relays)</span>
-          <span class="energy-subval" id="totalRuntimeVal">0h 0m</span>
-        </div>
-        <div class="energy-subitem">
-          <span class="energy-subtitle">Live Connected Power</span>
-          <span class="energy-subval" id="totalLiveWattsVal" style="color:var(--success);">0.0 W</span>
         </div>
       </div>
     </div>
@@ -1176,10 +1173,55 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Power Saver & RTOS Telemetry -->
-    <div class="telemetry-card">
+    <!-- Total Energy Consumption Card (Frontend Summary) -->
+    <div class="energy-total-card" id="energySection">
+      <div class="energy-total-header">
+        <span class="energy-title">⚡ Total Energy Consumed</span>
+        <span class="energy-val-badge" id="totalKwhBadge">0.000 kWh</span>
+      </div>
+      <div class="energy-subgrid">
+        <div class="energy-subitem">
+          <span class="energy-subtitle">Total Runtime (All 4 Relays)</span>
+          <span class="energy-subval" id="totalRuntimeVal">0h 0m</span>
+        </div>
+        <div class="energy-subitem">
+          <span class="energy-subtitle">Live Connected Power</span>
+          <span class="energy-subval" id="totalLiveWattsVal" style="color:var(--success);">0.0 W</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKEND & SYSTEM SERVICES BANNER -->
+    <div class="section-banner backend-banner" id="backendSection">
+      <div class="section-banner-left">
+        <span class="section-badge backend-badge">⚙️ BACKEND & SYSTEM ENGINE</span>
+        <span class="section-banner-text">FreeRTOS Dual-Core Engine, Auto-Sleep & Telemetry</span>
+      </div>
+      <span class="section-pill backend-pill">Core 0 & Core 1</span>
+    </div>
+
+    <!-- Auto-Sleep Live Countdown & Low Power Saver Card -->
+    <div class="sleep-countdown-card" id="powerSection">
+      <div class="sleep-left">
+        <div class="sleep-title">
+          <span>🔋 Auto-Sleep Power Saver</span>
+          <span class="sleep-countdown-val" id="sleepCountdownText">--:--</span>
+        </div>
+        <span class="sleep-sub" id="sleepStatusSub">Auto-sleep active. Inactivity will shut off Wi-Fi AP & pulse Blue LED smoothly.</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="powerSaverSwitch" onchange="togglePowerSaver(this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- FreeRTOS System Telemetry & Diagnostics -->
+    <div class="telemetry-card" id="telemetrySection">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:800; font-size:13px; color:#fff;">📊 FreeRTOS System Telemetry</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-weight:800; font-size:13px; color:#fff;">📊 FreeRTOS System Telemetry</span>
+          <span class="section-badge backend-badge" style="font-size:9px; padding:2px 6px;">BACKEND</span>
+        </div>
         <button class="btn btn-primary" style="padding:4px 10px; font-size:11px;" onclick="openSettingsModal()">⚙️ Config</button>
       </div>
 
@@ -1197,7 +1239,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
           <span class="telem-val" id="telemUptime">--</span>
         </div>
         <div class="telem-box">
-          <span class="telem-title">Connected Phones</span>
+          <span class="telem-title">Connected Stations</span>
           <span class="telem-val" id="telemClients">1</span>
         </div>
         <div class="telem-box">
@@ -1792,21 +1834,25 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
       }
     }
 
-    // Permanent Stay-On Mode Toggle
-    async function togglePermanentStayOn(stayOn) {
+    // Auto-Sleep Low Power Saver Mode Toggle
+    async function togglePowerSaver(enable) {
       try {
         const res = await fetch('/api/power', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: `stay_on=${stayOn ? 1 : 0}`
+          body: `enable=${enable ? 1 : 0}`
         });
         if (res.ok) {
-          showToast(`Permanent Always-On ${stayOn ? 'Enabled' : 'Disabled'}`);
+          showToast(enable ? '🔋 Auto-Sleep Power Saver Enabled' : '⚡ 24/7 Continuous Mode Active');
           fetchStatus();
         }
       } catch(err) {
-        showToast('Error changing stay-on setting');
+        showToast('Error changing power setting');
       }
+    }
+
+    async function togglePermanentStayOn(stayOn) {
+      await togglePowerSaver(!stayOn);
     }
 
     // Telegram Configuration & Test
@@ -1868,7 +1914,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         await fetch('/api/power', {
           method: 'POST',
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: `stay_on=${stayOn ? 1 : 0}&sleep_min=${sleepMin}&wake_min=${wakeMin}`
+          body: `enable=${stayOn ? 0 : 1}&stay_on=${stayOn ? 1 : 0}&sleep_min=${sleepMin}&wake_min=${wakeMin}`
         });
 
         await fetch('/api/settings', {
@@ -1908,9 +1954,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         document.getElementById('liveClock').innerText = data.time.clock;
         document.getElementById('liveDate').innerText = data.time.date + (data.time.synced ? ' (Synced)' : ' (Not Synced)');
 
-        // Permanent Stay-On & Sleep Countdown Display
-        const stayOnSwitch = document.getElementById('permanentStayOnSwitch');
-        if (stayOnSwitch) stayOnSwitch.checked = data.power.stay_on;
+        // Power Saver & Sleep Countdown Display
+        const psSwitch = document.getElementById('powerSaverSwitch');
+        if (psSwitch) psSwitch.checked = data.power.enabled;
         if (!isModalOpen) {
           const mStay = document.getElementById('modalPermanentStayOn');
           if (mStay) mStay.checked = data.power.stay_on;
@@ -1918,18 +1964,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
         const cdElem = document.getElementById('sleepCountdownText');
         const subElem = document.getElementById('sleepStatusSub');
-        if (data.power.stay_on) {
-          if (cdElem) cdElem.innerText = 'ALWAYS-ON';
-          if (subElem) subElem.innerText = '⚡ Permanent 24/7 Mode active. Auto-sleep is disabled.';
-        } else if (data.power.sleeping) {
+        if (data.power.sleeping) {
           if (cdElem) cdElem.innerText = formatSecs(data.power.next_state_sec);
-          if (subElem) subElem.innerText = '💤 AP Sleeping (Blue LED Breathing) &bull; Re-awakens for discovery in:';
+          if (subElem) subElem.innerHTML = '💤 <b>AP Sleeping (Blue LED Smooth Breathing)</b> &bull; Discovery wake window in:';
         } else if (data.power.enabled) {
           if (cdElem) cdElem.innerText = formatSecs(data.power.next_state_sec);
-          if (subElem) subElem.innerText = '🔋 Inactivity sleep countdown active. AP sleeps in:';
+          if (subElem) subElem.innerHTML = '🔋 <b>Power Saver Active (Blue LED pulses in sleep):</b> Auto-sleeps in:';
         } else {
-          if (cdElem) cdElem.innerText = 'OFF';
-          if (subElem) subElem.innerText = 'Auto-sleep disabled. System runs continuously.';
+          if (cdElem) cdElem.innerText = '24/7 ON';
+          if (subElem) subElem.innerHTML = '⚡ <b>Always-On Mode:</b> Auto-sleep disabled. System runs 24/7 continuously.';
         }
 
         let totalSecs = 0;
