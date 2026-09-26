@@ -15,6 +15,7 @@ public:
     // Core Relay Actions (Thread-safe)
     void setRelayState(uint8_t channelId, bool state);
     void toggleRelay(uint8_t channelId);
+    void setAllOn();
     void setAllOff();
     
     // Inching / Pulse Trigger (0.5s - 10s momentary pulse) - Commented out for now

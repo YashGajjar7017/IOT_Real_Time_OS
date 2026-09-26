@@ -1,6 +1,11 @@
 #include "PowerManager.h"
 
-PowerManager::PowerManager() : _lastActivityTick(0), _stateChangeTick(0), _processTicks(0) {
+PowerManager::PowerManager() : 
+    _lastActivityTick(0), 
+    _stateChangeTick(0), 
+    _processTicks(0),
+    _ledBrightness(0),
+    _ledDirection(4) {
     _powerMutex = xSemaphoreCreateMutex();
 
     _config.enabled = false;
@@ -27,6 +32,9 @@ PowerManager& PowerManager::getInstance() {
 }
 
 void PowerManager::begin(const char* apSsid, const char* apPass) {
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
     if (apSsid && strlen(apSsid) > 0) {
         strncpy(_apSsid, apSsid, sizeof(_apSsid) - 1);
     }
@@ -39,6 +47,8 @@ void PowerManager::begin(const char* apSsid, const char* apPass) {
     _lastActivityTick = millis();
     _stateChangeTick = millis();
     _processTicks = 0;
+    _ledBrightness = 0;
+    _ledDirection = 4;
 }
 
 void PowerManager::setLowPowerMode(bool enable, uint32_t sleepMin, uint32_t wakeMin) {
@@ -128,15 +138,16 @@ LowPowerConfig PowerManager::getConfig() {
 uint32_t PowerManager::getSecondsUntilNextState() {
     uint32_t remaining = 0;
     if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
-        if (_config.permanentStayOn) {
+        if (_config.permanentStayOn || !_config.enabled) {
             remaining = 0;
         } else {
-            uint32_t elapsed = millis() - _stateChangeTick;
+            uint32_t now = millis();
             if (_config.isApSleeping) {
+                uint32_t elapsed = now - _stateChangeTick;
                 uint32_t targetMs = _config.sleepIntervalMin * 60 * 1000;
                 remaining = (elapsed < targetMs) ? ((targetMs - elapsed) / 1000) : 0;
-            } else if (_config.enabled) {
-                uint32_t actElapsed = millis() - _lastActivityTick;
+            } else {
+                uint32_t actElapsed = now - _lastActivityTick;
                 uint32_t targetMs = _config.wakeWindowMin * 60 * 1000;
                 remaining = (actElapsed < targetMs) ? ((targetMs - actElapsed) / 1000) : 0;
             }
@@ -148,6 +159,24 @@ uint32_t PowerManager::getSecondsUntilNextState() {
 
 uint32_t PowerManager::getTickCount() {
     return _processTicks;
+}
+
+void PowerManager::updateSleepLed() {
+    if (_config.isApSleeping) {
+        // Smooth breathing / fading blue light effect in sleep mode (high & low)
+        _ledBrightness += _ledDirection;
+        if (_ledBrightness >= 250) {
+            _ledBrightness = 250;
+            _ledDirection = -5;
+        } else if (_ledBrightness <= 2) {
+            _ledBrightness = 2;
+            _ledDirection = 5;
+        }
+        analogWrite(STATUS_LED_PIN, (uint8_t)_ledBrightness);
+    } else {
+        analogWrite(STATUS_LED_PIN, 0);
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
 }
 
 void PowerManager::wakeUpAP() {
@@ -164,25 +193,34 @@ void PowerManager::wakeUpAP() {
     _config.isApSleeping = false;
     _lastActivityTick = millis();
     _stateChangeTick = millis();
+    
+    // Turn OFF sleep breathing LED when awake
+    analogWrite(STATUS_LED_PIN, 0);
+    digitalWrite(STATUS_LED_PIN, LOW);
+    
     Serial.printf("[PowerManager] AP Awake: %s (IP: 192.168.4.1)\n", _apSsid);
 }
 
 void PowerManager::putAPToSleep() {
     if (_config.permanentStayOn) {
-        return; // Inhibit sleep if permanent stay on is checked
+        return; // Inhibit sleep if permanent stay on is active
     }
-    Serial.println("[PowerManager] Putting Wi-Fi AP to sleep (Power Saving)...");
+    Serial.println("[PowerManager] Putting Wi-Fi AP to sleep (Power Saving Mode)...");
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_OFF);
 
     _config.isApSleeping = true;
     _stateChangeTick = millis();
-    Serial.printf("[PowerManager] Wi-Fi AP disabled. Next wake in %u minutes.\n", _config.sleepIntervalMin);
+    _ledBrightness = 0;
+    _ledDirection = 5;
+    Serial.printf("[PowerManager] Wi-Fi AP sleeping. Blue LED breathing smoothly. Next wake in %u minutes.\n", _config.sleepIntervalMin);
 }
 
 void PowerManager::processEngine() {
     _processTicks++;
-    if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(_powerMutex, pdMS_TO_TICKS(30)) == pdTRUE) {
+        updateSleepLed();
+
         // If permanent stay on is enabled, ensure AP remains awake
         if (_config.permanentStayOn) {
             if (_config.isApSleeping) {
@@ -192,22 +230,17 @@ void PowerManager::processEngine() {
             uint32_t now = millis();
 
             if (!_config.isApSleeping) {
-                // If stations are connected, treat as active
-                if (WiFi.softAPgetStationNum() > 0) {
-                    _lastActivityTick = now;
-                }
-
                 // Check inactivity timeout
                 uint32_t activeTimeoutMs = _config.wakeWindowMin * 60 * 1000;
                 if (now - _lastActivityTick >= activeTimeoutMs) {
-                    // No activity during wake window -> Enter sleep
+                    // Inactivity timeout expired -> Enter sleep mode with breathing LED
                     putAPToSleep();
                 }
             } else {
                 // AP is sleeping, check if sleep interval has elapsed
                 uint32_t sleepIntervalMs = _config.sleepIntervalMin * 60 * 1000;
                 if (now - _stateChangeTick >= sleepIntervalMs) {
-                    // Sleep period finished -> Wake up AP for discovery window
+                    // Sleep period finished -> Wake up AP for discovery/connection window
                     wakeUpAP();
                 }
             }

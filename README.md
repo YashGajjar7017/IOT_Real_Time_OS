@@ -110,24 +110,41 @@ A real-time, FreeRTOS multi-core IoT 4-channel relay controller powered by the E
 
 ---
 
-## REST API Reference
-
 | Method | Endpoint | Parameters | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/status` | None | Returns full JSON system state, all 4 relays (`r1`..`r4`), timers, cycles, events, telemetry, firmware version, and Port 500 status |
+| `GET` | `/api/status` | None | Returns full JSON system state, 4 relays, Telegram status, timers, power cycles, telemetry, and logs |
 | `POST` | `/api/relay` | `id=1&state=1` | Turn ON/OFF/Toggle Relay 1, 2, 3, or 4 |
-| `POST` | `/api/timer` | `id=1&start_delay=0&duration=600&enable=1` | Start or cancel countdown timer (seconds) |
+| `POST` | `/api/all_on` | None | Switch all 4 relays ON simultaneously |
+| `POST` | `/api/all_off` | None | Emergency kill switch - immediately forces all 4 relays OFF |
+| `POST` | `/api/timer` | `id=1&start_delay=0&duration=600&enable=1` | Start or cancel countdown timer (Input 1: Start Delay, Input 2: ON Duration) |
 | `POST` | `/api/cycle` | `id=1&on_sec=30&off_sec=30&cycles=0&enable=1` | Start or cancel cyclic automation loop |
 | `POST` | `/api/schedule` | `id=1&start_h=8&start_m=0&end_h=18&end_m=0&days=127&enable=1` | Set daily start/end schedule with weekday bitmask |
 | `POST` | `/api/time/sync` | `epoch=1725100000&tz_offset=330` | Sync software RTC with UNIX timestamp & timezone |
 | `POST` | `/api/time/manual` | `year=2026&month=8&day=31&hour=16&min=30&sec=0` | Set RTC date and time manually |
-| `POST` | `/api/power` | `stay_on=1` OR `enable=1&sleep_min=5&wake_min=2` | Configure Permanent Stay-On or Low-Power Sleep Duty Cycle |
+| `POST` | `/api/power` | `stay_on=1` OR `enable=1&sleep_min=5&wake_min=2` | Configure Permanent Stay-On or Auto-Sleep Duty Cycle |
 | `POST` | `/api/settings` | `r1_name=Lights&r1_watts=100&r1_actlow=1&r1_pwron=0...` | Configure relay names, wattage, active-low polarity, and power-on state |
-| `POST` | `/api/all_off` | None | Emergency kill switch - immediately forces all 4 relays OFF |
+| `POST` | `/api/telegram/config` | `enable=1&token=...&chat_id=...&sta_ssid=...&sta_pass=...&n_tog=1&n_tim=1&n_sch=1` | Save Telegram Bot credentials, Wi-Fi Station settings, and alert preferences |
+| `POST` | `/api/telegram/test` | None | Send a live test message to your Telegram chat |
 | `POST` | `/api/ota/upload` | Multipart file `update` (.bin) | Upload & flash compiled firmware via Port 80 (3 blinks on fail, 5 blinks on success) |
 | `POST` | `/api/ota/port500` | `enable=1` or `enable=0` | Security switch to enable/disable Port 500 OTA server |
 | `GET` | `http://<IP>:500/` | None | Standalone dedicated OTA Flashing Station Web Portal (when Port 500 enabled) |
 | `POST` | `http://<IP>:500/update` | Multipart file `update` (.bin) | Upload & flash compiled firmware via Port 500 |
+
+---
+
+## Telegram Bot Integration & Remote Commands
+
+When configured with your home/office Wi-Fi router credentials, the ESP32 operates in simultaneous **AP + Station Mode** (`WIFI_AP_STA`), enabling full bidirectional communication with Telegram:
+
+### Available Telegram Commands:
+- `/status` — Receive formatted real-time status of all 4 relays, load power, total energy (kWh), chip temperature, and system uptime.
+- `/r1_on`, `/r1_off`, `/r1_toggle` — Control Relay 1 (D5)
+- `/r2_on`, `/r2_off`, `/r2_toggle` — Control Relay 2 (D18)
+- `/r3_on`, `/r3_off`, `/r3_toggle` — Control Relay 3 (D19)
+- `/r4_on`, `/r4_off`, `/r4_toggle` — Control Relay 4 (D21)
+- `/all_on` — Turn all relays ON
+- `/all_off` — Emergency kill switch (All relays OFF)
+- `/help` or `/start` — Display the interactive command guide
 
 ---
 

@@ -1,4 +1,5 @@
 #include "RelayManager.h"
+#include "TelegramManager.h"
 
 RelayManager::RelayManager() : 
     _logHead(0), 
@@ -170,9 +171,6 @@ void RelayManager::applyPhysicalPin(uint8_t channelId) {
     // Active LOW vs Active HIGH calculation
     uint8_t level = _channels[idx].activeLow ? (_channels[idx].state ? LOW : HIGH) : (_channels[idx].state ? HIGH : LOW);
     digitalWrite(_channels[idx].pin, level);
-
-    // Keep onboard status LED OFF as default
-    digitalWrite(STATUS_LED_PIN, LOW);
 }
 
 void RelayManager::setRelayState(uint8_t channelId, bool state) {
@@ -188,6 +186,9 @@ void RelayManager::setRelayState(uint8_t channelId, bool state) {
             snprintf(buf, sizeof(buf), "%s manual -> %s", _channels[idx].name, state ? "ON" : "OFF");
             logEvent(buf);
             
+            // Notify Telegram
+            TelegramManager::getInstance().notifyRelayStateChange(channelId, _channels[idx].name, state, "Manual Web/Shortcut");
+
             // If manual toggle occurred, cancel any one-shot pulse
             _pulseActive[idx] = false;
             
@@ -203,6 +204,20 @@ void RelayManager::toggleRelay(uint8_t channelId) {
     setRelayState(channelId, !_channels[channelId - 1].state);
 }
 
+void RelayManager::setAllOn() {
+    if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
+        for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
+            _channels[i].state = true;
+            applyPhysicalPin(i + 1);
+        }
+        logEvent("⚡ All Relays Switched ON");
+        TelegramManager::getInstance().sendMessage("🟢 <b>All 4 Relays Switched ON via Web GUI!</b>");
+        saveToPreferences();
+        Serial.println("[RelayManager] ALL ON triggered!");
+        xSemaphoreGive(_relayMutex);
+    }
+}
+
 void RelayManager::setAllOff() {
     if (xSemaphoreTake(_relayMutex, portMAX_DELAY) == pdTRUE) {
         for (int i = 0; i < NUM_RELAY_CHANNELS; i++) {
@@ -214,6 +229,7 @@ void RelayManager::setAllOff() {
             applyPhysicalPin(i + 1);
         }
         logEvent("🚨 EMERGENCY: All Relays Forced OFF");
+        TelegramManager::getInstance().sendMessage("🚨 <b>EMERGENCY: All Relays Forced OFF via Web GUI!</b>");
         saveToPreferences();
         Serial.println("[RelayManager] Emergency ALL OFF triggered!");
         xSemaphoreGive(_relayMutex);
@@ -427,6 +443,7 @@ void RelayManager::checkTimers() {
                     char buf[64];
                     snprintf(buf, sizeof(buf), "%s Timer Delay Done -> Turned ON", _channels[i].name);
                     logEvent(buf);
+                    TelegramManager::getInstance().notifyTimerCompleted(i + 1, _channels[i].name, true);
 
                     Serial.printf("[RelayManager] Timer delay elapsed. Relay %d turned ON for %u s\n", i + 1, _channels[i].timer.durationSec);
                     
@@ -445,6 +462,7 @@ void RelayManager::checkTimers() {
                     char buf[64];
                     snprintf(buf, sizeof(buf), "%s Timer Duration Ended -> OFF", _channels[i].name);
                     logEvent(buf);
+                    TelegramManager::getInstance().notifyTimerCompleted(i + 1, _channels[i].name, false);
 
                     Serial.printf("[RelayManager] Timer duration finished. Relay %d turned OFF\n", i + 1);
                 }
@@ -484,6 +502,7 @@ void RelayManager::checkCycles() {
                         char buf[64];
                         snprintf(buf, sizeof(buf), "%s All %u Cycles Completed", _channels[i].name, _channels[i].cycle.totalCycles);
                         logEvent(buf);
+                        TelegramManager::getInstance().notifyCycleCompleted(i + 1, _channels[i].name, _channels[i].cycle.totalCycles);
                     } else {
                         // Switch to ON phase
                         _channels[i].cycle.inOnPhase = true;
@@ -542,6 +561,7 @@ void RelayManager::checkSchedules() {
                 char buf[64];
                 snprintf(buf, sizeof(buf), "%s Schedule Trigger -> %s", _channels[i].name, shouldBeOn ? "ON" : "OFF");
                 logEvent(buf);
+                TelegramManager::getInstance().notifyScheduleTriggered(i + 1, _channels[i].name, shouldBeOn);
 
                 Serial.printf("[RelayManager] Schedule triggered: Relay %d -> %s\n", i + 1, shouldBeOn ? "ON" : "OFF");
             }

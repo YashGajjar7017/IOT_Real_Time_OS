@@ -41,6 +41,7 @@ private:
 
     void wakeUpAP();
     void putAPToSleep();
+    void updateSleepLed();
 
     LowPowerConfig _config;
     SemaphoreHandle_t _powerMutex;
@@ -52,6 +53,8 @@ private:
     uint32_t _lastActivityTick;
     uint32_t _stateChangeTick;
     uint32_t _processTicks;
+    int16_t _ledBrightness;
+    int8_t _ledDirection;
 };
 
 #endif // POWER_MANAGER_H

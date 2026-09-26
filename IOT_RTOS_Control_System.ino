@@ -7,6 +7,7 @@
 #include "TimeManager.h"
 #include "RelayManager.h"
 #include "PowerManager.h"
+#include "TelegramManager.h"
 #include "WebPages.h"
 
 // Primary Web Server and Captive Portal DNS Server
@@ -66,13 +67,14 @@ void handleRoot() {
 }
 
 void handleStatus() {
-    PowerManager::getInstance().registerUserActivity();
+    // Note: Do not registerUserActivity on background status polling so auto-sleep timer can count down accurately
 
     RelayChannel r1 = RelayManager::getInstance().getChannel(1);
     RelayChannel r2 = RelayManager::getInstance().getChannel(2);
     RelayChannel r3 = RelayManager::getInstance().getChannel(3);
     RelayChannel r4 = RelayManager::getInstance().getChannel(4);
     LowPowerConfig pwr = PowerManager::getInstance().getConfig();
+    TelegramConfig tg = TelegramManager::getInstance().getConfig();
 
     char timeBuf[16];
     char dateBuf[16];
@@ -148,6 +150,18 @@ void handleStatus() {
     json += "\"sleep_min\":" + String(pwr.sleepIntervalMin) + ",";
     json += "\"wake_min\":" + String(pwr.wakeWindowMin) + ",";
     json += "\"next_state_sec\":" + String(PowerManager::getInstance().getSecondsUntilNextState());
+    json += "},";
+
+    // Telegram Bot object
+    json += "\"tg\":{";
+    json += "\"enabled\":" + String(tg.enabled ? "true" : "false") + ",";
+    json += "\"connected\":" + String(tg.staConnected ? "true" : "false") + ",";
+    json += "\"bot_set\":" + String(strlen(tg.botToken) > 0 ? "true" : "false") + ",";
+    json += "\"chat_id\":\"" + String(tg.chatId) + "\",";
+    json += "\"sta_ssid\":\"" + String(tg.staSsid) + "\",";
+    json += "\"n_tog\":" + String(tg.notifyOnToggle ? "true" : "false") + ",";
+    json += "\"n_tim\":" + String(tg.notifyOnTimer ? "true" : "false") + ",";
+    json += "\"n_sch\":" + String(tg.notifyOnSchedule ? "true" : "false");
     json += "},";
 
     // Telemetry object
@@ -345,10 +359,49 @@ void handleSettingsUpdate() {
     server.send(200, "text/plain", "Settings Saved");
 }
 
+void handleAllOn() {
+    PowerManager::getInstance().registerUserActivity();
+    RelayManager::getInstance().setAllOn();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "text/plain", "ALL RELAYS ON");
+}
+
 void handleEmergencyAllOff() {
+    PowerManager::getInstance().registerUserActivity();
     RelayManager::getInstance().setAllOff();
     server.sendHeader("Access-Control-Allow-Origin", "*");
     server.send(200, "text/plain", "ALL RELAYS OFF");
+}
+
+void handleTelegramConfig() {
+    PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+
+    bool enabled = server.hasArg("enable") ? (server.arg("enable").toInt() == 1) : false;
+    String token = server.hasArg("token") ? server.arg("token") : "";
+    String chat = server.hasArg("chat_id") ? server.arg("chat_id") : "";
+    String ssid = server.hasArg("sta_ssid") ? server.arg("sta_ssid") : "";
+    String pass = server.hasArg("sta_pass") ? server.arg("sta_pass") : "";
+    bool nTog = server.hasArg("n_tog") ? (server.arg("n_tog").toInt() == 1) : true;
+    bool nTim = server.hasArg("n_tim") ? (server.arg("n_tim").toInt() == 1) : true;
+    bool nSch = server.hasArg("n_sch") ? (server.arg("n_sch").toInt() == 1) : true;
+
+    TelegramManager::getInstance().updateConfig(enabled, token.c_str(), chat.c_str(),
+                                                ssid.c_str(), pass.c_str(),
+                                                nTog, nTim, nSch);
+    server.send(200, "text/plain", "Telegram Config Saved");
+}
+
+void handleTelegramTest() {
+    PowerManager::getInstance().registerUserActivity();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+
+    bool ok = TelegramManager::getInstance().sendTestMessage();
+    if (ok) {
+        server.send(200, "text/plain", "Test Message Sent");
+    } else {
+        server.send(500, "text/plain", "Test message failed. Verify Wi-Fi Station & Bot credentials.");
+    }
 }
 
 void handleCaptivePortalRedirect() {
@@ -502,13 +555,14 @@ void vRelayTask(void *pvParameters) {
     }
 }
 
-// Core 0 Task: Low Power AP Sleep/Wake Cycle & Permanent Stay-On Manager
+// Core 0 Task: Low Power AP Sleep/Wake Cycle, Smooth Breathing LED & Telegram Background Engine
 void vPowerTask(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(500); // Check every 500ms
+    const TickType_t xFrequency = pdMS_TO_TICKS(25); // Check every 25ms for smooth sleep LED breathing & responsive events
 
     for (;;) {
         PowerManager::getInstance().processEngine();
+        TelegramManager::getInstance().processEngine();
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
@@ -521,13 +575,14 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     Serial.println("\n=======================================================");
-    Serial.println("   ESP32 Real-Time Dual Relay Controller & AP Server   ");
+    Serial.println("   ESP32 Real-Time Quad Relay & Telegram Control System");
     Serial.println("=======================================================");
 
     // 1. Initialize Subsystems
     TimeManager::getInstance().begin();
     RelayManager::getInstance().begin();
     PowerManager::getInstance().begin(DEFAULT_AP_SSID, DEFAULT_AP_PASS);
+    TelegramManager::getInstance().begin();
 
     // 2. Start Wi-Fi Access Point
     WiFi.mode(WIFI_AP);
@@ -549,6 +604,8 @@ void setup() {
     server.on("/", HTTP_GET, handleRoot);
     server.on("/api/status", HTTP_GET, handleStatus);
     server.on("/api/relay", HTTP_POST, handleRelayToggle);
+    server.on("/api/all_on", HTTP_POST, handleAllOn);
+    server.on("/api/all_off", HTTP_POST, handleEmergencyAllOff);
     server.on("/api/timer", HTTP_POST, handleTimerSet);
     server.on("/api/cycle", HTTP_POST, handleCycleSet);
     // server.on("/api/pulse", HTTP_POST, handlePulseSet);
@@ -557,7 +614,8 @@ void setup() {
     server.on("/api/time/manual", HTTP_POST, handleManualTime);
     server.on("/api/power", HTTP_POST, handlePowerConfig);
     server.on("/api/settings", HTTP_POST, handleSettingsUpdate);
-    server.on("/api/all_off", HTTP_POST, handleEmergencyAllOff);
+    server.on("/api/telegram/config", HTTP_POST, handleTelegramConfig);
+    server.on("/api/telegram/test", HTTP_POST, handleTelegramTest);
 
     // OTA Firmware Upload & Port 500 Security endpoints
     server.on("/api/ota/upload", HTTP_POST, handlePort80OtaUploadEnd, handlePort80OtaChunk);
